@@ -1,0 +1,9 @@
+# 아두이노 빌드 캐시
+*.elf
+*.hex
+*.map
+build/
+
+# 에디터
+.vscode/
+*.DS_Store

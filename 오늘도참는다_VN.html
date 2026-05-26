@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>오늘도 참는다</title>
+<style>
+:root{
+  --bg:#0a0814;--ui:rgba(10,8,20,.93);--text:#f0ede8;--muted:#8a8680;
+  --gold:#c9a14a;--red:#e2493b;--green:#5b9d7a;--blue:#4a8ec9;--line:rgba(255,255,255,.08);
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow:hidden;background:var(--bg);}
+body{font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',-apple-system,sans-serif;-webkit-font-smoothing:antialiased;}
+
+/* HUD */
+#hud{
+  position:fixed;top:0;left:0;right:0;z-index:100;height:52px;padding:0 20px;
+  display:flex;align-items:center;gap:16px;
+  background:rgba(0,0,0,.65);backdrop-filter:blur(12px);border-bottom:1px solid var(--line);
+}
+.stat-wrap{display:flex;flex-direction:column;gap:3px;min-width:90px;}
+.stat-top{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);letter-spacing:.04em;}
+.stat-top b{color:var(--text);font-size:11px;font-weight:700;}
+.bar{height:5px;background:rgba(255,255,255,.1);border-radius:3px;overflow:hidden;}
+.bar-fill{height:100%;border-radius:3px;transition:width .35s ease;}
+#stress-fill{background:linear-gradient(90deg,#e7a09d,var(--red));}
+#money-fill{background:linear-gradient(90deg,#b8922c,var(--gold));}
+#rep-fill{background:linear-gradient(90deg,#3a7a5a,var(--green));}
+#serial-btn{
+  margin-left:auto;padding:3px 10px;border-radius:6px;
+  background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);
+  color:var(--muted);font-size:11px;font-weight:600;font-family:inherit;cursor:pointer;
+}
+#serial-btn.on{background:rgba(91,157,122,.2);border-color:#5b9d7a;color:#5b9d7a;}
+
+/* Background & char */
+#bg{position:fixed;inset:0;z-index:0;transition:background 1s ease;}
+#char-area{
+  position:fixed;top:52px;left:0;right:0;bottom:200px;
+  display:flex;align-items:center;justify-content:center;
+  pointer-events:none;z-index:1;
+}
+#char{font-size:108px;filter:drop-shadow(0 10px 30px rgba(0,0,0,.55));animation:fl 3.5s ease-in-out infinite;}
+@keyframes fl{0%,100%{transform:translateY(0);}50%{transform:translateY(-10px);}}
+#char.shake{animation:csh .4s ease !important;}
+@keyframes csh{0%,100%{transform:translateX(0);}25%{transform:translateX(-7px);}75%{transform:translateX(7px);}}
+#scene-lbl{
+  position:fixed;top:58px;left:0;right:0;text-align:center;z-index:2;
+  font-size:11px;letter-spacing:.16em;color:var(--muted);text-transform:uppercase;pointer-events:none;
+}
+
+/* Dialogue */
+#dlg{
+  position:fixed;bottom:0;left:0;right:0;z-index:50;
+  padding:20px 32px 26px;min-height:185px;
+  background:var(--ui);backdrop-filter:blur(14px);border-top:1px solid var(--line);
+  display:none;
+}
+#dlg-name{font-size:12px;font-weight:700;letter-spacing:.07em;color:var(--gold);margin-bottom:10px;min-height:18px;}
+#dlg-text{font-size:16px;line-height:1.78;color:var(--text);min-height:60px;}
+#dlg-hint{margin-top:10px;text-align:right;font-size:11px;color:var(--muted);animation:bk 1.3s ease infinite;}
+@keyframes bk{0%,100%{opacity:.9;}50%{opacity:.2;}}
+
+/* Choices */
+#choices{
+  position:fixed;bottom:0;left:0;right:0;z-index:60;
+  background:var(--ui);backdrop-filter:blur(14px);border-top:1px solid var(--line);
+  display:none;flex-direction:column;
+}
+.c-btn{
+  padding:19px 32px;border:none;background:transparent;
+  color:var(--text);font-family:inherit;font-size:15px;text-align:left;cursor:pointer;
+  border-bottom:1px solid var(--line);transition:.15s;display:flex;align-items:center;gap:12px;
+}
+.c-btn:last-child{border-bottom:none;}
+.c-btn:hover{background:rgba(255,255,255,.05);}
+.c-num{width:26px;height:26px;border-radius:50%;background:rgba(255,255,255,.08);
+  font-size:12px;font-weight:700;color:var(--muted);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.c-tag{font-size:10px;color:var(--muted);background:rgba(255,255,255,.07);padding:2px 8px;border-radius:10px;margin-left:auto;flex-shrink:0;}
+.c-btn.vent .c-num{background:rgba(226,73,59,.18);color:var(--red);}
+.c-btn.endure .c-num{background:rgba(91,157,122,.18);color:var(--green);}
+
+/* Boss modal */
+#boss{
+  position:fixed;inset:0;z-index:200;display:none;
+  align-items:center;justify-content:center;
+  background:rgba(0,0,0,.3);
+}
+#boss.show{display:flex;}
+.boss-card{
+  background:rgba(10,8,20,.97);border:1px solid rgba(226,73,59,.4);border-radius:20px;
+  padding:34px 38px;max-width:460px;width:90%;text-align:center;
+  box-shadow:0 0 60px rgba(226,73,59,.25);
+  animation:boss-glow 1.2s ease infinite alternate;
+}
+@keyframes boss-glow{from{box-shadow:0 0 30px rgba(226,73,59,.2);}to{box-shadow:0 0 70px rgba(226,73,59,.4);}}
+.boss-card h2{font-size:22px;font-weight:800;color:#fff;margin-bottom:8px;}
+.boss-card p{font-size:13.5px;color:var(--muted);line-height:1.65;margin-bottom:26px;}
+.boss-opts{display:flex;gap:14px;}
+.boss-opt{
+  flex:1;padding:20px 12px;border-radius:14px;border:2px solid;background:transparent;
+  font-family:inherit;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:8px;transition:.18s;
+}
+.boss-opt.p{border-color:var(--red);color:var(--red);}
+.boss-opt.p:hover{background:rgba(226,73,59,.15);}
+.boss-opt.t{border-color:var(--green);color:var(--green);}
+.boss-opt.t:hover{background:rgba(91,157,122,.15);}
+.boss-opt .ico{font-size:30px;}
+.boss-opt .lbl{font-size:13px;font-weight:700;}
+.boss-opt .fx{font-size:11px;opacity:.8;line-height:1.5;}
+.boss-hint{margin-top:16px;font-size:11px;color:var(--muted);}
+
+/* Boss-mode: grayscale effect on background elements */
+body.boss-mode #bg,body.boss-mode #char,body.boss-mode #scene-lbl{
+  filter:saturate(0.15) brightness(0.5);
+  transition:filter .5s ease;
+}
+body.boss-mode #dlg,body.boss-mode #choices{
+  filter:saturate(0.3) brightness(0.6);
+}
+
+/* Floating inner thoughts during boss mode */
+.thought{
+  position:fixed;z-index:180;pointer-events:none;
+  font-size:15px;font-weight:700;color:rgba(226,73,59,.85);
+  animation:th-float 2.5s ease forwards;
+  text-shadow:0 0 10px rgba(226,73,59,.5);
+}
+@keyframes th-float{
+  0%{opacity:0;transform:translateY(10px) rotate(-3deg);}
+  20%{opacity:1;}
+  80%{opacity:.9;}
+  100%{opacity:0;transform:translateY(-30px) rotate(3deg);}
+}
+
+/* Title */
+#title{
+  position:fixed;inset:0;z-index:300;
+  background:linear-gradient(135deg,#0a0814,#1e1230);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px;text-align:center;
+}
+#title h1{font-size:56px;font-weight:900;color:var(--text);line-height:1.05;letter-spacing:-.02em;margin:12px 0 14px;}
+#title p{font-size:14.5px;color:var(--muted);line-height:1.75;max-width:380px;margin-bottom:38px;}
+.start{padding:15px 44px;border:none;background:var(--text);color:#0a0814;font-family:inherit;font-size:16px;font-weight:800;border-radius:12px;cursor:pointer;transition:.15s;}
+.start:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(0,0,0,.4);}
+.hint-k{margin-top:22px;font-size:12px;color:#555;line-height:1.9;}
+
+/* Game Over */
+#gameover{
+  position:fixed;inset:0;z-index:300;background:linear-gradient(135deg,#1a0505,#0a0000);
+  display:none;flex-direction:column;align-items:center;justify-content:center;padding:40px;text-align:center;
+}
+#gameover.show{display:flex;}
+.go-ico{font-size:68px;margin-bottom:14px;}
+.go-title{font-size:42px;font-weight:900;color:#e2493b;margin-bottom:10px;}
+.go-quote{font-size:16px;color:rgba(255,255,255,.7);margin-bottom:16px;font-style:italic;}
+.go-sub{font-size:14px;color:var(--muted);line-height:1.7;max-width:420px;margin-bottom:24px;}
+.go-stats{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:14px;padding:18px 28px;min-width:280px;text-align:left;margin-bottom:26px;}
+
+/* Ending */
+#ending{
+  position:fixed;inset:0;z-index:300;
+  display:none;flex-direction:column;align-items:center;justify-content:center;padding:40px;text-align:center;
+}
+#ending.show{display:flex;}
+.e-ico{font-size:68px;margin-bottom:14px;}
+.e-title{font-size:38px;font-weight:900;color:var(--text);margin-bottom:8px;}
+.e-quote{font-size:16px;color:rgba(255,255,255,.65);margin-bottom:14px;font-style:italic;}
+.e-sub{font-size:14px;color:var(--muted);line-height:1.7;max-width:440px;margin-bottom:24px;}
+.e-stats{background:rgba(255,255,255,.05);border:1px solid var(--line);border-radius:14px;padding:18px 28px;min-width:280px;text-align:left;margin-bottom:24px;}
+.s-row{display:flex;justify-content:space-between;padding:6px 0;font-size:13.5px;color:var(--muted);border-bottom:1px solid rgba(255,255,255,.05);}
+.s-row:last-child{border:none;font-weight:700;color:var(--text);font-size:15px;padding-top:10px;}
+.s-row span+span{color:var(--text);}
+.again{padding:12px 30px;border:2px solid rgba(255,255,255,.18);background:transparent;color:var(--text);font-family:inherit;font-size:14px;font-weight:600;border-radius:10px;cursor:pointer;transition:.15s;}
+.again:hover{background:rgba(255,255,255,.08);}
+
+/* Float notifications */
+.float{
+  position:fixed;z-index:150;pointer-events:none;font-size:13px;font-weight:700;
+  background:rgba(0,0,0,.75);padding:5px 13px;border-radius:20px;border:1px solid rgba(255,255,255,.09);
+  animation:fup 1.3s ease forwards;
+}
+@keyframes fup{0%{opacity:1;transform:translateY(0);}100%{opacity:0;transform:translateY(-46px);}}
+
+/* Fade overlay */
+#fade{position:fixed;inset:0;z-index:500;background:#000;opacity:0;pointer-events:none;transition:opacity .3s ease;}
+#fade.in{opacity:1;pointer-events:all;}
+</style>
+</head>
+<body>
+<div id="fade"></div>
+
+<!-- Title -->
+<div id="title">
+  <div style="font-size:46px">😮‍💨</div>
+  <h1>오늘도<br>참는다</h1>
+  <p>패스트푸드 알바 첫날. 사장님의 말 한마디가 가슴에 쌓인다.<br>끝까지 참을 것인가, 당당히 맞설 것인가.</p>
+  <button class="start" onclick="startGame()">출근하기</button>
+  <div class="hint-k">
+    <kbd style="background:#222;color:#aaa;padding:1px 7px;border-radius:4px;font-size:11px;">1</kbd>
+    <kbd style="background:#222;color:#aaa;padding:1px 7px;border-radius:4px;font-size:11px;">2</kbd> 선택 &nbsp;|&nbsp;
+    <kbd style="background:#222;color:#aaa;padding:1px 7px;border-radius:4px;font-size:11px;">Space</kbd> 진행<br>
+    보스분기: P키(화낸다) / T키(참는다) 또는 클릭
+  </div>
+</div>
+
+<!-- HUD -->
+<div id="hud">
+  <div class="stat-wrap">
+    <div class="stat-top"><span>😤 스트레스</span><b id="sv">50</b></div>
+    <div class="bar"><div class="bar-fill" id="stress-fill" style="width:50%"></div></div>
+  </div>
+  <div class="stat-wrap">
+    <div class="stat-top"><span>💰 돈</span><b id="mv">50</b></div>
+    <div class="bar"><div class="bar-fill" id="money-fill" style="width:50%"></div></div>
+  </div>
+  <div class="stat-wrap">
+    <div class="stat-top"><span>⭐ 평판</span><b id="rv">50</b></div>
+    <div class="bar"><div class="bar-fill" id="rep-fill" style="width:50%"></div></div>
+  </div>
+  <button id="serial-btn" onclick="toggleSerial()">🔌 아두이노</button>
+</div>
+
+<!-- Scene -->
+<div id="bg"></div>
+<div id="scene-lbl"></div>
+<div id="char-area"><div id="char"></div></div>
+
+<!-- Dialogue -->
+<div id="dlg">
+  <div id="dlg-name"></div>
+  <div id="dlg-text"></div>
+  <div id="dlg-hint">▼ 클릭 또는 Space</div>
+</div>
+
+<!-- Choices -->
+<div id="choices"></div>
+
+<!-- Boss modal -->
+<div id="boss">
+  <div class="boss-card">
+    <h2>💢 한계 돌파</h2>
+    <p>속마음이 터지기 직전입니다.<br>어떻게 하시겠습니까?</p>
+    <div class="boss-opts">
+      <button class="boss-opt p" onclick="bossPick('P')">
+        <span class="ico">🤜</span>
+        <span class="lbl">피에조 — 화낸다</span>
+        <span class="fx">모든 걸 쏟아낸다<br><b>GAME OVER</b></span>
+      </button>
+      <button class="boss-opt t" onclick="bossPick('T')">
+        <span class="ico">😤</span>
+        <span class="lbl">기울기 — 참는다</span>
+        <span class="fx">스트레스 ↓↓<br>돈/평판 ↑↑</span>
+      </button>
+    </div>
+    <div class="boss-hint" id="boss-hint">P키(화낸다) / T키(참는다) 또는 클릭</div>
+  </div>
+</div>
+
+<!-- Game Over -->
+<div id="gameover">
+  <div class="go-ico" id="go-ico"></div>
+  <div class="go-title" id="go-title"></div>
+  <div class="go-quote" id="go-quote"></div>
+  <div class="go-sub" id="go-sub"></div>
+  <div class="go-stats" id="go-stats"></div>
+  <button class="again" onclick="restartGame()">다시 출근하기</button>
+</div>
+
+<!-- Ending -->
+<div id="ending">
+  <div class="e-ico" id="e-ico"></div>
+  <div class="e-title" id="e-title"></div>
+  <div class="e-quote" id="e-quote"></div>
+  <div class="e-sub" id="e-sub"></div>
+  <div class="e-stats" id="e-stats"></div>
+  <button class="again" onclick="restartGame()">다시 출근하기</button>
+</div>
+
+<script>
+/* ═══════════ SCENES ═══════════ */
+const SCENES = [
+  {
+    id:'S0', bg:'bedroom', title:'아침 — 자취방', auto:true,
+    dlg:[
+      {sp:null, tx:'삐삐삐삐삐 —', sty:'sys'},
+      {sp:'나',  tx:'하.. 또 출근해야 하네..'},
+    ]
+  },
+  {
+    id:'S1', bg:'shop', title:'패스트푸드점 출근',
+    dlg:[
+      {sp:'나',   tx:'오늘은 제발 조용했으면 좋겠다...'},
+      {sp:'사장', tx:'왔어? 근데 표정이 왜 그래? 출근하기 싫은 사람 같네.', mood:'neutral'},
+    ],
+    choices:[
+      {tx:'사장님 표정부터 좀 보세요...',
+       resp:{sp:'사장',tx:'뭐라고 했어? 요즘 애들 말투가 왜 그래??',mood:'angry'},
+       eff:{stress:-8,money:-8,rep:-8}, type:'A', tag:'화낸다'},
+      {tx:'아니에요! 오늘도 열심히 해보겠습니다.',
+       resp:{sp:'사장',tx:'그래, 말이라도 예쁘게 해야지.',mood:'mild'},
+       eff:{stress:8,money:8,rep:8}, type:'B', tag:'참는다'},
+    ]
+  },
+  {
+    id:'S2', bg:'shop', title:'마감 청소 트집',
+    dlg:[
+      {sp:'사장', tx:'어제 마감 청소 제대로 안 돼 있더라? 내가 꼼꼼하게 하라고 했지? 바닥 구석도 안 닦았던데?', mood:'neutral'},
+    ],
+    choices:[
+      {tx:'아니 혼자 다 했는데 뭘 더 하라는 거에요?',
+       resp:{sp:'사장',tx:'아니, 변명하려고? 잘못했으면 알겠습니다 해야지.',mood:'angry'},
+       eff:{stress:-8,money:-8,rep:-8}, type:'A', tag:'화낸다'},
+      {tx:'아 죄송합니다. 제가 확인을 제대로 못한 것 같아요.',
+       resp:{sp:'사장',tx:'알면 됐고.',mood:'mild'},
+       eff:{stress:8,money:8,rep:8}, type:'B', tag:'참는다'},
+    ]
+  },
+  {
+    id:'S3', bg:'shop', title:'폰 사용 트집',
+    dlg:[
+      {sp:null, tx:'피크타임이 끝나고 잠깐 한산한 시간...', sty:'narr'},
+      {sp:'사장', tx:'그리고 손님 없다고 앉아서 폰만 하지 말고. 할 거 없으면 눈치껏 뭐라도 찾아서 해야지.', mood:'neutral'},
+    ],
+    choices:[
+      {tx:'할 거 다 했고 손님도 없는데 잠깐 쉬지도 못해요?',
+       resp:{sp:'사장',tx:'태도가 왜 그렇게 삐딱해? 너 계속 그러면 오래 못 간다?',mood:'angry'},
+       eff:{stress:-8,money:-8,rep:-8}, type:'A', tag:'화낸다'},
+      {tx:'네, 다음부터는 더 신경 쓸게요.',
+       resp:{sp:'사장',tx:'그래. 그렇게 내 가게다~ 생각하고 해야지.',mood:'mild'},
+       eff:{stress:8,money:8,rep:8}, type:'B', tag:'참는다'},
+    ]
+  },
+  {
+    id:'S4', bg:'shop', title:'손님 응대 트집',
+    dlg:[
+      {sp:'사장', tx:'아, 그리고 손님 들어오면 인사 좀 밝게 해. 아까 어서오세요 하는데 영혼이 없더라? 이래서야 손님이 오고 싶겠어?', mood:'neutral'},
+    ],
+    choices:[
+      {tx:'제 영혼은 출근할 때 두고 왔는데요...',
+       resp:{sp:'사장',tx:'지금 비꼬는 거야? 너 오늘 왜 이렇게 말대꾸해?',mood:'angry'},
+       eff:{stress:-8,money:-8,rep:-8}, type:'A', tag:'화낸다'},
+      {tx:'아 네, 더 밝게 할게요.',
+       resp:{sp:'사장',tx:'그래. 직원이 좀 웃고 그래야 가게가 생기가 돌 거 아냐~',mood:'mild'},
+       eff:{stress:8,money:8,rep:8}, type:'B', tag:'참는다'},
+    ]
+  },
+  {
+    id:'S5', bg:'shop', title:'주문 실수 트집',
+    dlg:[
+      {sp:'사장', tx:'아, 그리고 아까 손님 햄버거 하나 잘못 나간 거. 재료비 하나하나 쌓이면 다~ 내 손해인 거 몰라? 이번달 월급에서 뺄 거야.', mood:'neutral'},
+    ],
+    choices:[
+      {tx:'그거 손님이 주문 잘못해서 다시 나간 거였잖아요..',
+       resp:{sp:'사장',tx:'아니 계속 변명만 해? 잘못을 했으면 인정할 줄을 알아야지!',mood:'angry'},
+       eff:{stress:-8,money:-8,rep:-8}, type:'A', tag:'화낸다'},
+      {tx:'죄송합니다. 다음부터는 꼼꼼하게 확인할게요.',
+       resp:{sp:'사장',tx:'다음부터 조심해. 이번만 봐주는 거니까 다음은 없어.',mood:'mild'},
+       eff:{stress:8,money:8,rep:8}, type:'B', tag:'참는다'},
+    ]
+  },
+  {
+    id:'S6', bg:'shop', title:'갑작스러운 대타 강요',
+    dlg:[
+      {sp:'사장', tx:'아 맞다, 내일 오픈 알바 한 명이 못 나온대. 너 내일 쉬지? 니가 나와서 대타 좀 해. 젊은 사람이 하루 더 일하는 게 뭐 힘들다고.', mood:'neutral'},
+    ],
+    choices:[
+      {tx:'아니 제 쉬는 날인데요.. 갑자기 이러시면 어떡해요?',
+       resp:{sp:'사장',tx:'다들 맞춰가면서 하는 거지 뭘. 협조성이 그렇게 없어서 어떡해?',mood:'angry'},
+       eff:{stress:-8,money:-8,rep:-8}, type:'A', tag:'화낸다'},
+      {tx:'아... 몇 시까지 나가면 될까요?',
+       resp:{sp:'사장',tx:'그래, 내일 오픈 때 나오면 돼.',mood:'mild'},
+       eff:{stress:8,money:8,rep:8}, type:'B', tag:'참는다'},
+    ]
+  },
+  {
+    id:'S7', bg:'shop-dark', title:'막타',
+    dlg:[
+      {sp:'사장', tx:'요즘 애들은 금방 힘들다고 도망갈 생각만 하더라. 끈기가 없어. 우리 때는 말이야 —', mood:'rant'},
+      {sp:'나',   tx:'아 진짜... 그만 좀... 집 가고 싶다...'},
+    ],
+    choices:[
+      {tx:'사장님이 자꾸 이렇게 하니까 도망가는 거잖아요. 직접 해 보시던가요.',
+       resp:{sp:'사장',tx:'뭐? 너 잠깐 이리 와봐.',mood:'rage'},
+       eff:null, type:'A', tag:'퇴사', special:'quit'},
+      {tx:'네.. 알겠습니다..',
+       resp:{sp:'사장',tx:'그래, 이번 알바는 그나마 좀 낫구만.',mood:'mild'},
+       eff:{stress:8,money:8,rep:8}, type:'B', tag:'참는다'},
+    ]
+  }
+];
+
+const MOODS={null:'',neutral:'😐',mild:'🙂',angry:'😠',rage:'🤬',rant:'😤'};
+const BGS={
+  bedroom:'linear-gradient(140deg,#0a0814 0%,#1e1040 60%,#140c28 100%)',
+  shop:'linear-gradient(150deg,#1a120a 0%,#251a08 50%,#120c04 100%)',
+  'shop-dark':'linear-gradient(150deg,#0e0a06 0%,#160c03 60%,#0a0600 100%)'
+};
+const THOUGHTS=['아 진짜...','그만 좀','집 가고 싶다','나도 사람인데','왜 나한테','한계야','짜증나','어쩌라고','😤','😠','진짜 몰라'];
+
+/* ═══════════ STATE ═══════════ */
+let G=null;
+let pendingNext=null;
+let choosing=false;
+let bossResp=null;    // pending boss response after boss modal
+let bossAfterCb=null; // callback after boss modal resolved
+let thoughtTimer=null;
+
+function fresh(){return{stress:50,money:50,rep:50,si:0,di:0,prevVent:false};}
+
+/* ═══════════ HUD ═══════════ */
+const $=id=>document.getElementById(id);
+function hud(){
+  $('sv').textContent=G.stress; $('stress-fill').style.width=G.stress+'%';
+  $('mv').textContent=G.money;  $('money-fill').style.width=G.money+'%';
+  $('rv').textContent=G.rep;    $('rep-fill').style.width=G.rep+'%';
+}
+function applyEff(e){
+  if(!e)return;
+  G.stress=Math.max(0,Math.min(100,G.stress+(e.stress||0)));
+  G.money =Math.max(0,Math.min(100,G.money +(e.money ||0)));
+  G.rep   =Math.max(0,Math.min(100,G.rep   +(e.rep   ||0)));
+  hud();
+}
+function showFloat(t,c,pct){
+  const el=document.createElement('div');
+  el.className='float';el.textContent=t;el.style.color=c;
+  el.style.left='50%';el.style.top=(pct||48)+'%';el.style.transform='translateX(-50%)';
+  document.body.appendChild(el);setTimeout(()=>el.remove(),1300);
+}
+function effFloats(e){
+  if(!e)return;
+  const r=[];
+  if(e.stress)r.push({t:`스트레스 ${e.stress>0?'+':''}${e.stress}`,c:e.stress>0?'#e2493b':'#5b9d7a'});
+  if(e.money) r.push({t:`돈 ${e.money>0?'+':''}${e.money}`,c:e.money>0?'#c9a14a':'#888'});
+  if(e.rep)   r.push({t:`평판 ${e.rep>0?'+':''}${e.rep}`,c:e.rep>0?'#5b9d7a':'#888'});
+  r.forEach((x,i)=>setTimeout(()=>showFloat(x.t,x.c,44+i*7),i*140));
+}
+
+/* ═══════════ TYPEWRITER ═══════════ */
+let typer=null,typerFull='';
+function typeWrite(el,txt,spd){
+  clearInterval(typer);typerFull=txt;el.textContent='';let i=0;
+  typer=setInterval(()=>{el.textContent+=txt[i++];if(i>=txt.length){clearInterval(typer);typer=null;}},spd||28);
+}
+function skipOrNo(el){
+  if(typer){clearInterval(typer);typer=null;el.textContent=typerFull;return true;}
+  return false;
+}
+
+/* ═══════════ FLOW ═══════════ */
+function startGame(){
+  $('title').style.display='none';
+  $('dlg').style.display='block';
+  G=fresh();hud();
+  runScene(0);
+}
+function restartGame(){
+  $('gameover').classList.remove('show');
+  $('ending').classList.remove('show');
+  stopThoughts();
+  document.body.classList.remove('boss-mode');
+  $('title').style.display='flex';
+}
+
+function runScene(si){
+  G.si=si;G.di=0;
+  const sc=SCENES[si];
+  $('bg').style.background=BGS[sc.bg]||BGS.shop;
+  $('scene-lbl').textContent=sc.title||'';
+  $('choices').style.display='none';
+  choosing=false;
+
+  // passive stress (S1 onward)
+  if(si>0){
+    const add=G.prevVent?10:5;
+    G.stress=Math.min(100,G.stress+add);
+    hud();
+  }
+
+  nextLine(sc);
+}
+
+function nextLine(sc){
+  const lines=sc.dlg;
+  if(G.di>=lines.length){
+    if(sc.choices) showChoices(sc);
+    else           waitFor(()=>advance());
+    return;
+  }
+  const ln=lines[G.di++];
+  const isSys=ln.sty==='sys',isNarr=ln.sty==='narr';
+
+  if(!ln.sp||isSys||isNarr){
+    $('dlg-name').textContent='';
+    $('char').textContent='';
+  } else if(ln.sp==='나'){
+    $('dlg-name').textContent='나 (속으로)';$('dlg-name').style.color='#888';
+    $('char').textContent='😶';
+  } else {
+    $('dlg-name').textContent=ln.sp;$('dlg-name').style.color='var(--gold)';
+    $('char').textContent=MOODS[ln.mood]||'😐';
+    if(ln.mood==='angry'||ln.mood==='rage'||ln.mood==='rant'){
+      $('char').className='shake';setTimeout(()=>$('char').className='',450);
+    }
+  }
+
+  const el=$('dlg-text');
+  typeWrite(el,ln.tx,isSys?75:28);
+  $('dlg-hint').style.display='block';
+  waitFor(()=>{
+    if(skipOrNo(el)) waitFor(()=>nextLine(sc));
+    else nextLine(sc);
+  });
+}
+
+function waitFor(fn){pendingNext=fn;}
+
+function showChoices(sc){
+  $('dlg-hint').style.display='none';
+  $('dlg').style.display='none';
+  choosing=true;
+  const el=$('choices');
+  el.innerHTML='';
+  sc.choices.forEach((c,i)=>{
+    const b=document.createElement('button');
+    b.className='c-btn '+(c.type==='A'?'vent':'endure');
+    b.innerHTML=`<span class="c-num">${i+1}</span><span>${c.tx}</span><span class="c-tag">${c.tag}</span>`;
+    b.onclick=()=>pick(sc,i);
+    el.appendChild(b);
+  });
+  el.style.display='flex';el.style.flexDirection='column';
+}
+
+function pick(sc,i){
+  if(!choosing)return;
+  choosing=false;
+  $('choices').style.display='none';
+  $('dlg').style.display='block';
+
+  const ch=sc.choices[i];
+
+  // Special quit (S7A)
+  if(ch.special==='quit'){
+    showResp(ch.resp,()=>showGameOver('quit'));
+    return;
+  }
+
+  const isVent=ch.type==='A';
+  G.prevVent=isVent;
+
+  if(ch.eff) applyEff(ch.eff);
+  if(ch.eff) effFloats(ch.eff);
+
+  // B choice: check boss분기
+  if(!isVent && G.stress>=100){
+    // Show player says their polite line first, then boss分기
+    showPlayerLine(ch.tx, ()=>triggerBoss(ch.resp));
+    return;
+  }
+
+  // A choice: check game over
+  if(isVent&&(G.money<=0||G.rep<=0)){
+    showResp(ch.resp,()=>showGameOver('broke'));
+    return;
+  }
+
+  showResp(ch.resp,()=>{
+    if(G.money<=0||G.rep<=0){ showGameOver('broke'); return; }
+    advance();
+  });
+}
+
+function showPlayerLine(txt,cb){
+  $('dlg-name').textContent='나';$('dlg-name').style.color='#888';
+  $('char').textContent='😶';
+  const el=$('dlg-text');
+  typeWrite(el,txt);
+  $('dlg-hint').style.display='block';
+  waitFor(()=>{
+    if(skipOrNo(el)) waitFor(()=>{pendingNext=null;cb();});
+    else{pendingNext=null;cb();}
+  });
+}
+
+function showResp(resp,cb){
+  if(!resp){cb();return;}
+  $('dlg-name').textContent=resp.sp;$('dlg-name').style.color='var(--gold)';
+  $('char').textContent=MOODS[resp.mood]||'😐';
+  if(resp.mood==='angry'||resp.mood==='rage'){
+    $('char').className='shake';setTimeout(()=>$('char').className='',450);
+  }
+  const el=$('dlg-text');
+  typeWrite(el,resp.tx);
+  $('dlg-hint').style.display='block';
+  waitFor(()=>{
+    if(skipOrNo(el)) waitFor(()=>{pendingNext=null;cb();});
+    else{pendingNext=null;cb();}
+  });
+}
+
+function advance(){
+  const next=G.si+1;
+  if(next>=SCENES.length){showEnding();return;}
+  const ov=$('fade');ov.classList.add('in');
+  setTimeout(()=>{runScene(next);setTimeout(()=>ov.classList.remove('in'),50);},300);
+}
+
+/* ═══════════ BOSS분기 ═══════════ */
+function triggerBoss(pendResp){
+  bossResp=pendResp;
+  document.body.classList.add('boss-mode');
+  $('boss').classList.add('show');
+  $('boss-hint').textContent=arduinoConnected?'아두이노 — 피에조(화낸다) / 기울기(참는다)':'P키(화낸다) / T키(참는다) 또는 클릭';
+  startThoughts();
+}
+
+function bossPick(type){
+  if(!$('boss').classList.contains('show'))return;
+  $('boss').classList.remove('show');
+  document.body.classList.remove('boss-mode');
+  stopThoughts();
+
+  if(type==='P'){
+    showGameOver('boss');
+    return;
+  }
+  // T = 참는다: reset stress, gain money/rep
+  G.stress=70;
+  applyEff({money:10,rep:5});
+  effFloats({stress:-30,money:10,rep:5});
+  showFloat('😤 하... 오늘만 버티자...','#5b9d7a',32);
+  setTimeout(()=>{
+    showResp(bossResp,()=>{
+      bossResp=null;
+      if(G.money<=0||G.rep<=0){showGameOver('broke');return;}
+      advance();
+    });
+  },400);
+}
+
+/* ═══════════ INNER THOUGHTS ═══════════ */
+function startThoughts(){
+  thoughtTimer=setInterval(()=>{
+    const t=THOUGHTS[Math.floor(Math.random()*THOUGHTS.length)];
+    const el=document.createElement('div');
+    el.className='thought';el.textContent=t;
+    el.style.left=Math.random()*75+10+'%';
+    el.style.top=Math.random()*55+20+'%';
+    el.style.fontSize=(13+Math.random()*8)+'px';
+    document.body.appendChild(el);
+    setTimeout(()=>el.remove(),2500);
+  },280);
+}
+function stopThoughts(){
+  clearInterval(thoughtTimer);
+  document.querySelectorAll('.thought').forEach(e=>e.remove());
+}
+
+/* ═══════════ GAME OVER ═══════════ */
+const GOVERS={
+  quit:{ico:'🚪',title:'퇴사',
+    sub:'유니폼을 벗어던졌다. 뒤도 안 돌아봤다. 속은 좀 시원하다. 그런데... 다음달 월세는?',
+    quote:'"잘 있어요, 사장님."'},
+  boss:{ico:'💥',title:'GAME OVER',
+    sub:'스트레스가 한계를 넘었다. 속에 있던 말이 다 튀어나왔다. 사장님이 굳은 표정으로 쳐다봤다.',
+    quote:'"저 오늘 그만둘게요."'},
+  broke:{ico:'📉',title:'GAME OVER',
+    sub:'관계가 완전히 무너졌다. 더 이상 이 자리에 있을 명분이 없다.',
+    quote:'"...그냥 집에 가야겠다."'}
+};
+function showGameOver(type){
+  const g=GOVERS[type]||GOVERS.broke;
+  $('go-ico').textContent=g.ico;
+  $('go-title').textContent=g.title;
+  $('go-quote').textContent=g.quote;
+  $('go-sub').textContent=g.sub;
+  $('go-stats').innerHTML=statRows();
+  $('gameover').classList.add('show');
+}
+
+/* ═══════════ ENDINGS ═══════════ */
+const ENDS={
+  proso:{ico:'😵‍💫',title:'프로 사회인 엔딩',
+    bg:'linear-gradient(135deg,#101008,#201808)',
+    sub:'월급은 받았다. 성실왕 뱃지도 받았다. 스트레스가 장기가 됐지만, 그래도 오늘도 출근한다.',
+    quote:'"어...? 벌써 월요일이야?"'},
+  normal:{ico:'🍺',title:'오늘도 살아남았다',
+    bg:'linear-gradient(135deg,#080814,#10101e)',
+    sub:'오늘도 어찌저찌 버텼다. 월급 받았고, 맥주도 한 캔 마셨다. 내일이 걱정이긴 하지만.',
+    quote:'"내일의 내가 알아서 하겠지..."'},
+  relax:{ico:'✨',title:'속은 편한데 엔딩',
+    bg:'linear-gradient(135deg,#08100a,#081210)',
+    sub:'돈도 벌었고 마음도 비교적 평온하다. 사장님이 뭐라 했지만 크게 신경 안 썼다. 이게 최선이다.',
+    quote:'"뭐... 어떻게든 되겠지."'}
+};
+function showEnding(){
+  const social=(G.money+G.rep)/2;
+  let key;
+  if(G.stress>social+20)      key='proso';
+  else if(G.stress<social-20) key='relax';
+  else                         key='normal';
+
+  const E=ENDS[key];
+  const el=$('ending');
+  el.style.background=E.bg;
+  $('e-ico').textContent=E.ico;
+  $('e-title').textContent=E.title;
+  $('e-quote').textContent=E.quote;
+  $('e-sub').textContent=E.sub;
+  $('e-stats').innerHTML=statRows()+'<div class="s-row"><span>결말</span><span>'+E.title+'</span></div>';
+  el.classList.add('show');
+}
+
+function statRows(){
+  const social=Math.round((G.money+G.rep)/2);
+  return `<div class="s-row"><span>😤 스트레스</span><span>${G.stress}</span></div>
+    <div class="s-row"><span>💰 돈</span><span>${G.money}</span></div>
+    <div class="s-row"><span>⭐ 평판</span><span>${G.rep}</span></div>
+    <div class="s-row"><span>사회점수 (돈+평판)÷2</span><span>${social}</span></div>`;
+}
+
+/* ═══════════ INPUT ═══════════ */
+document.addEventListener('keydown',e=>{
+  if(e.code==='Space'||e.key===' '){
+    e.preventDefault();
+    if($('boss').classList.contains('show'))return;
+    if(choosing)return;
+    if(pendingNext){const fn=pendingNext;pendingNext=null;fn();}
+  }
+  if(e.key==='1'&&choosing) document.querySelectorAll('.c-btn')[0]?.click();
+  if(e.key==='2'&&choosing) document.querySelectorAll('.c-btn')[1]?.click();
+  if((e.key==='p'||e.key==='P')&&$('boss').classList.contains('show')) bossPick('P');
+  if((e.key==='t'||e.key==='T')&&$('boss').classList.contains('show')) bossPick('T');
+});
+document.addEventListener('click',e=>{
+  if(e.target.closest('#choices')||e.target.closest('#boss')||
+     e.target.closest('#hud')||e.target.closest('#ending')||
+     e.target.closest('#gameover')||e.target.closest('#title'))return;
+  if($('boss').classList.contains('show')||choosing)return;
+  if(pendingNext){const fn=pendingNext;pendingNext=null;fn();}
+});
+
+/* ═══════════ WEB SERIAL ═══════════ */
+let serialPort=null,serialReader=null,arduinoConnected=false;
+async function toggleSerial(){
+  if(arduinoConnected){
+    try{if(serialReader)await serialReader.cancel();}catch(e){}
+    try{if(serialPort)await serialPort.close();}catch(e){}
+    serialPort=null;serialReader=null;arduinoConnected=false;
+    $('serial-btn').textContent='🔌 아두이노';$('serial-btn').classList.remove('on');return;
+  }
+  if(!('serial' in navigator)){alert('Chrome/Edge + 로컬서버 필요');return;}
+  try{
+    serialPort=await navigator.serial.requestPort();
+    await serialPort.open({baudRate:9600});
+    arduinoConnected=true;
+    $('serial-btn').textContent='✅ 연결됨';$('serial-btn').classList.add('on');
+    readSerial();
+  }catch(e){if(e.name!=='NotFoundError')alert('연결 실패: '+e.message);}
+}
+async function readSerial(){
+  const dec=new TextDecoderStream();
+  serialPort.readable.pipeTo(dec.writable);
+  const reader=dec.readable.getReader();serialReader=reader;let buf='';
+  try{
+    while(true){
+      const{value,done}=await reader.read();if(done)break;
+      buf+=value;const lines=buf.split('\n');buf=lines.pop();
+      for(const l of lines){const m=l.trim();if(m)onArduino(m);}
+    }
+  }catch(e){
+    arduinoConnected=false;$('serial-btn').textContent='🔌 아두이노';$('serial-btn').classList.remove('on');
+  }
+}
+function onArduino(msg){
+  if(!G)return;
+  if($('boss').classList.contains('show')){
+    if(msg==='SHAKE') bossPick('T');
+    if(msg==='PIEZO'||msg==='BTN:1') bossPick('P');
+  }
+}
+</script>
+</body>
+</html>
