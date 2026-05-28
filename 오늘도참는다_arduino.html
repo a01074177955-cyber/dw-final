@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>오늘도 참는다</title>
+<style>
+  :root{
+    --bg:#f4f4f2;--panel:#ffffff;--ink:#2b2b2b;--ink-soft:#8a8a86;
+    --line:#e3e3df;--accent:#3a3a38;--rage:#e2493b;--rage-deep:#b8231a;
+    --ok:#5b9d7a;--gold:#c9a14a;
+    --shadow:0 1px 0 rgba(0,0,0,.02),0 8px 30px rgba(0,0,0,.05);
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;}
+  body{
+    font-family:'Pretendard','Apple SD Gothic Neo','Malgun Gothic',-apple-system,sans-serif;
+    background:var(--bg);color:var(--ink);
+    display:flex;align-items:center;justify-content:center;
+    min-height:100vh;overflow:hidden;-webkit-font-smoothing:antialiased;
+  }
+  body::before{
+    content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+    background-image:radial-gradient(circle at 1px 1px,rgba(0,0,0,.025) 1px,transparent 0);
+    background-size:22px 22px;
+  }
+  #app{
+    position:relative;z-index:1;
+    width:min(960px,94vw);height:min(620px,92vh);
+    background:var(--panel);border:1px solid var(--line);border-radius:18px;
+    box-shadow:var(--shadow);overflow:hidden;display:flex;flex-direction:column;
+  }
+  .topbar{
+    height:44px;flex:none;display:flex;align-items:center;gap:8px;
+    padding:0 16px;border-bottom:1px solid var(--line);
+    background:linear-gradient(#fbfbfa,#f6f6f4);
+  }
+  .dot{width:11px;height:11px;border-radius:50%;background:#dcdcd8;}
+  .dot.r{background:#e6a39d;}.dot.y{background:#e6d29d;}.dot.g{background:#a9d6bd;}
+  .topbar .title{margin-left:8px;font-size:12.5px;letter-spacing:.04em;color:var(--ink-soft);text-transform:uppercase;}
+  .topbar .clock{margin-left:auto;font-size:12px;color:var(--ink-soft);font-variant-numeric:tabular-nums;}
+  /* 아두이노 연결 버튼 */
+  #serialBtn{
+    margin-left:12px;border:1px solid var(--line);background:#f0f0ed;
+    color:var(--ink-soft);font-family:inherit;font-size:11px;font-weight:600;
+    padding:4px 10px;border-radius:7px;cursor:pointer;transition:.15s;white-space:nowrap;
+  }
+  #serialBtn:hover{border-color:#bbb;color:var(--ink);}
+  #serialBtn.connected{background:#e6f4ec;border-color:#9dcdb2;color:#2e7a54;}
+  #serialStatus{font-size:10px;color:var(--ink-soft);margin-left:4px;}
+
+  .screen{flex:1;position:relative;overflow:hidden;}
+  .view{position:absolute;inset:0;padding:34px 40px;display:none;flex-direction:column;}
+  .view.active{display:flex;animation:fade .4s ease;}
+  @keyframes fade{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:none;}}
+
+  .label{font-size:12px;letter-spacing:.18em;color:var(--ink-soft);text-transform:uppercase;}
+  #title-view{justify-content:center;align-items:flex-start;}
+  .bigtitle{font-size:64px;font-weight:800;line-height:1.02;letter-spacing:-.02em;margin:14px 0 18px;}
+  .bigtitle small{display:block;font-size:15px;font-weight:500;color:var(--ink-soft);letter-spacing:0;margin-top:16px;max-width:460px;line-height:1.6;}
+  .startbtn{
+    margin-top:30px;border:none;cursor:pointer;background:var(--ink);color:#fff;
+    font-size:15px;font-weight:600;font-family:inherit;padding:14px 30px;border-radius:10px;
+    transition:transform .12s ease,background .2s;
+  }
+  .startbtn:hover{transform:translateY(-2px);background:#000;}
+  .hintline{margin-top:18px;font-size:12.5px;color:var(--ink-soft);line-height:1.7;}
+  kbd{background:#efefec;border:1px solid #ddd;border-bottom-width:2px;border-radius:5px;padding:1px 7px;font-family:inherit;font-size:12px;}
+
+  #select-view .grid{margin-top:22px;display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+  .jobcard{
+    border:1px solid var(--line);border-radius:14px;padding:18px 16px;cursor:pointer;
+    background:#fcfcfb;transition:.18s;position:relative;overflow:hidden;
+  }
+  .jobcard:hover{transform:translateY(-3px);border-color:#cfcfca;box-shadow:0 10px 24px rgba(0,0,0,.06);}
+  .jobcard .jb{font-size:19px;font-weight:700;}
+  .jobcard .npc{font-size:12.5px;color:var(--rage);margin-top:3px;font-weight:600;}
+  .jobcard .sm{font-size:12px;color:var(--ink-soft);margin-top:10px;line-height:1.55;min-height:54px;}
+  .stars{margin-top:8px;font-size:12px;color:var(--gold);letter-spacing:2px;}
+
+  #play-view{padding:0;}
+  .hud{
+    flex:none;padding:16px 28px 10px;border-bottom:1px solid var(--line);
+    display:flex;align-items:center;gap:18px;
+  }
+  .hud .who{font-size:13px;}.hud .who b{font-size:15px;}.hud .who span{color:var(--ink-soft);}
+  .lives{margin-left:auto;font-size:16px;letter-spacing:3px;color:var(--rage);}
+  .lives .lost{color:#e6dede;}
+  .timer{font-size:13px;color:var(--ink-soft);font-variant-numeric:tabular-nums;min-width:54px;text-align:right;}
+
+  .gaugewrap{flex:none;padding:12px 28px 6px;}
+  .gaugelabel{display:flex;justify-content:space-between;font-size:11px;color:var(--ink-soft);letter-spacing:.08em;margin-bottom:5px;text-transform:uppercase;}
+  .gauge{height:10px;background:#eeeeea;border-radius:6px;overflow:hidden;}
+  .gauge .fill{height:100%;width:0%;background:linear-gradient(90deg,#e7b9b3,var(--rage));transition:width .25s ease;border-radius:6px;}
+
+  .stage{flex:1;position:relative;padding:18px 28px;overflow:hidden;display:flex;flex-direction:column;}
+  .bubble{
+    align-self:flex-start;max-width:78%;background:#f3f3f0;border:1px solid var(--line);
+    border-radius:4px 16px 16px 16px;padding:13px 17px;font-size:15px;line-height:1.5;
+    box-shadow:0 2px 6px rgba(0,0,0,.03);animation:pop .3s ease;
+  }
+  .bubble.rage{background:#fdecea;border-color:#f3c9c3;color:var(--rage-deep);font-weight:600;}
+  @keyframes pop{from{opacity:0;transform:scale(.96) translateY(4px);}to{opacity:1;transform:none;}}
+
+  .typing{flex:none;padding:14px 28px 22px;border-top:1px solid var(--line);background:#fbfbfa;}
+  .replylabel{font-size:11.5px;color:var(--ink-soft);letter-spacing:.02em;margin-bottom:8px;}
+  .prompt{
+    font-family:'D2Coding','Menlo','Consolas',monospace;
+    font-size:16px;line-height:1.7;letter-spacing:.01em;margin-bottom:10px;min-height:28px;word-break:keep-all;
+  }
+  .prompt .done{color:var(--ok);}
+  .prompt .cur{background:var(--ink);color:#fff;border-radius:2px;}
+  .prompt .wrong{background:#f7d4cf;color:var(--rage-deep);border-radius:2px;}
+  .prompt .todo{color:#bdbdb8;}
+  .hiddenInput{position:fixed;left:-9999px;top:0;opacity:0;width:1px;height:1px;}
+  .typestatus{font-size:12px;color:var(--ink-soft);}
+
+  #disrupt{
+    position:absolute;inset:0;z-index:30;display:none;
+    align-items:center;justify-content:center;flex-direction:column;
+    background:radial-gradient(circle at 50% 45%,rgba(226,73,59,.86),rgba(184,35,26,.96));
+    color:#fff;text-align:center;animation:boil .6s ease infinite alternate;
+  }
+  #disrupt.show{display:flex;}
+  @keyframes boil{from{filter:brightness(1);}to{filter:brightness(1.12);}}
+  #disrupt .lock{font-size:46px;margin-bottom:8px;}
+  #disrupt h2{font-size:26px;font-weight:800;letter-spacing:-.01em;}
+  #disrupt p{margin-top:8px;font-size:14px;opacity:.92;line-height:1.6;}
+  .sensorbox{
+    margin-top:22px;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.35);
+    border-radius:14px;padding:18px 26px;backdrop-filter:blur(2px);min-width:300px;
+  }
+  .sensorbox .inst{font-size:15px;font-weight:700;margin-bottom:12px;}
+  .relief{height:12px;background:rgba(255,255,255,.25);border-radius:7px;overflow:hidden;margin-top:6px;}
+  .relief .rf{height:100%;width:100%;background:#fff;transition:width .12s linear;border-radius:7px;}
+  .keyhint{margin-top:14px;font-size:13px;opacity:.9;}
+  .keycap{
+    display:inline-block;background:#fff;color:var(--rage-deep);font-weight:800;
+    border-radius:7px;padding:3px 12px;margin:0 3px;font-size:15px;
+    box-shadow:0 3px 0 rgba(0,0,0,.18);transition:transform .06s;
+  }
+  .keycap.hit{transform:translateY(3px);box-shadow:0 0 0 rgba(0,0,0,0);}
+  .numpad{display:grid;grid-template-columns:repeat(3,52px);gap:9px;justify-content:center;margin-top:6px;}
+  .numpad .np{
+    height:46px;border-radius:9px;background:#fff;color:var(--rage-deep);font-weight:800;
+    font-size:18px;display:flex;align-items:center;justify-content:center;
+    box-shadow:0 3px 0 rgba(0,0,0,.18);
+  }
+  .numpad .np.next{outline:3px solid #ffe08a;}
+  .numpad .np.hit{transform:translateY(3px);box-shadow:none;background:#ffe08a;}
+
+  .shake{animation:shake .4s;}
+  @keyframes shake{
+    0%,100%{transform:none;}20%{transform:translate(-4px,2px) rotate(-.3deg);}
+    40%{transform:translate(4px,-2px) rotate(.3deg);}60%{transform:translate(-3px,1px);}
+    80%{transform:translate(3px,-1px);}
+  }
+
+  #result-view{align-items:center;justify-content:center;text-align:center;}
+  .rtitle{font-size:46px;font-weight:800;letter-spacing:-.02em;}
+  .rtitle.win{color:var(--ok);}.rtitle.lose{color:var(--rage);}
+  .paystub{
+    margin-top:22px;background:#fcfbf6;border:1px dashed var(--gold);border-radius:12px;
+    padding:20px 34px;min-width:300px;text-align:left;
+  }
+  .paystub .row{display:flex;justify-content:space-between;font-size:13.5px;padding:5px 0;color:#6a6a64;}
+  .paystub .row.total{border-top:1px solid #e6ddc2;margin-top:8px;padding-top:10px;font-size:18px;font-weight:800;color:var(--ink);}
+  .rsub{margin-top:16px;font-size:13.5px;color:var(--ink-soft);line-height:1.6;max-width:420px;}
+  .againbtn{
+    margin-top:24px;border:1px solid var(--ink);background:transparent;color:var(--ink);
+    font-family:inherit;font-size:14px;font-weight:600;padding:12px 26px;border-radius:9px;cursor:pointer;transition:.15s;
+  }
+  .againbtn:hover{background:var(--ink);color:#fff;}
+  .floatmsg{
+    position:absolute;font-size:13px;color:var(--rage);font-weight:700;pointer-events:none;
+    animation:floatup 1s ease forwards;
+  }
+  @keyframes floatup{from{opacity:1;transform:translateY(0);}to{opacity:0;transform:translateY(-30px);}}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="topbar">
+    <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+    <span class="title">직장시뮬레이터 v1.0</span>
+    <span class="clock" id="clock">09:00</span>
+    <button id="serialBtn" onclick="toggleSerial()">🔌 아두이노 연결</button>
+    <span id="serialStatus"></span>
+  </div>
+  <div class="screen" id="screen">
+    <!-- TITLE -->
+    <div class="view active" id="title-view">
+      <span class="label">Theme</span>
+      <h1 class="bigtitle">오늘도<br>참는다
+        <small>직장생활 중 치밀어 오르는 감정을 억누르고, '할 수 있어 더 해봐'를 골라 하며 사회적 가면을 유지하는 직장인의 인내. 그 아슬아슬한 경계를 넘지 않으려 애쓰는 하루를 체험한다.</small>
+      </h1>
+      <button class="startbtn" onclick="goSelect()">출근하기</button>
+      <div class="hintline">
+        상대의 말만을 <b>듣고만</b>, 당신의 속으로 일하며 채 <b>가면 이 답변</b>을 따라 칩니다.<br>
+        감정이 폭발하면 <b>일시</b>를 조작해 진정시키세요. 타이핑은 <kbd>키보드</kbd>, 직접 연결하면 아두이노로.
+      </div>
+    </div>
+    <!-- SELECT -->
+    <div class="view" id="select-view">
+      <span class="label">Situation — 오늘 누구로 버텨볼까</span>
+      <div class="grid" id="jobgrid"></div>
+    </div>
+    <!-- PLAY -->
+    <div class="view" id="play-view">
+      <div class="hud">
+        <div class="who"><b id="hudJob">회사원</b> &nbsp;<span>vs</span>&nbsp; <span id="hudNpc">상사</span></div>
+        <div class="lives" id="lives"></div>
+        <div class="timer" id="timer">03:00</div>
+      </div>
+      <div class="gaugewrap">
+        <div class="gaugelabel"><span>스트레스</span><span id="gpct">0%</span></div>
+        <div class="gauge"><div class="fill" id="gfill"></div></div>
+      </div>
+      <div class="stage" id="stage"></div>
+      <div class="typing">
+        <div class="replylabel">🎭 속으로 욕하고… 이렇게 대답하세요</div>
+        <div class="prompt" id="prompt"></div>
+        <div class="typestatus" id="tstatus">대답을 따라 입력하세요…</div>
+      </div>
+      <div id="disrupt">
+        <div class="lock">🔒</div>
+        <h2>감정 폭발 직전</h2>
+        <p id="disruptDesc">상대의 말이 머릿속에 가득 맴돕니다.<br>심호흡하고, 가면을 다시 쓰세요.</p>
+        <div class="sensorbox" id="sensorbox"></div>
+      </div>
+    </div>
+    <!-- RESULT -->
+    <div class="view" id="result-view">
+      <div class="rtitle" id="rtitle">퇴근</div>
+      <div class="paystub" id="paystub"></div>
+      <div class="rsub" id="rsub"></div>
+      <button class="againbtn" onclick="goSelect()">다른 하루 이어보기</button>
+    </div>
+  </div>
+</div>
+<input class="hiddenInput" id="hiddenInput" autocomplete="off">
+<script>
+/* ===================== 시나리오 데이터 ===================== */
+const SCENARIOS = [
+  {
+    id:"albabaite", job:"알바이트", npc:"사장님", difficulty:1,
+    summary:"오픈 청소 떠넘기기, 공짜 야근 강요, 임금 깎기.",
+    lines:[
+      {npc:"왜? 가방 놓자마자 정리부터 시작 안 해?", reply:"네 바로 하겠습니다.", rage:false},
+      {npc:"지금 누가 늦었는지 일지가 이게 뭐야.", reply:"제가 다시 깨끗하게 할게요.", rage:true},
+      {npc:"손님 많을 때 왜 그렇게 굼떠. 빨리 매.", reply:"네 다음엔 빠르게 움직이겠습니다.", rage:false},
+      {npc:"머리는 묶고 있지, 손님 인상이 어때.", reply:"죄송합니다 바로 묶겠습니다.", rage:true},
+      {npc:"손님 오면 인사 크게 해. 목소리가 그게 뭐야.", reply:"네 더 크게 인사하겠습니다.", rage:false},
+      {npc:"더 더 크게. 손님이 못 들었잖아.", reply:"이어오세요 안녕하세요!", rage:true},
+      {npc:"전 주에 컴플레인 들어왔는데 니가 가서 사과해.", reply:"네 제가 가서 사과드리겠습니다.", rage:false},
+      {npc:"내가? 왜 내가 가. 니가 사과했잖아.", reply:"불편을 드려 죄송합니다 사장.", rage:true},
+      {npc:"재고 정리하고, 화장실 청소하고, 쓰레기도.", reply:"네 순서대로 다 하겠습니다.", rage:false},
+      {npc:"왜 그것도 아직 안 했어?", reply:"지금 바로 처리하겠습니다.", rage:true},
+      {npc:"오늘 좀 일찍 오후 마감까지 해줄 수 있지?", reply:"네 가능하면 맞춰보겠습니다.", rage:false},
+      {npc:"임금은 똑같이 줄게. 원래 그런 거야.", reply:"네 알겠습니다.", rage:true},
+      {npc:"쉬는 시간? 안 바쁠 때 알아서 쉬어.", reply:"네 틈날 때 더 쉬겠습니다.", rage:false},
+      {npc:"지난번 계산 실수한 거 다 임금에서 깎겠어.", reply:"네 제가 더 조심하겠습니다.", rage:true},
+      {npc:"그러니까 시키면 시키는 대로 좀 해.", reply:"네 알겠습니다 사장님.", rage:true}
+    ]
+  },
+  {
+    id:"hwesawon", job:"회사원", npc:"상사", difficulty:2,
+    summary:"본인 실수도 떠넘기기, 퇴근 직전 일 던지기, 잡심부름.",
+    lines:[
+      {npc:"김 대리, 이거 누가 이렇게 틀려?", reply:"제가 다시 확인해보겠습니다.", rage:false},
+      {npc:"내가 분명 다르게 말했잖아.", reply:"제가 잘못 이해한 것 같습니다.", rage:true},
+      {npc:"이? 내가 언제 그렇게 말했어.", reply:"네 제가 다시 정리하겠습니다.", rage:true},
+      {npc:"일을 그렇게 대충 하니까 이 모양이지.", reply:"더 꼼꼼히 챙기겠습니다.", rage:true},
+      {npc:"저 신입보다 더 못하다, 진짜.", reply:"죄송합니다 보완하겠습니다.", rage:false},
+      {npc:"다른 사람들 다 보는데 왜 창피해?", reply:"네 바로 수정하겠습니다.", rage:true},
+      {npc:"저기, 오늘 야근 다시 해. 다 가잖아.", reply:"네 오늘 야근 마치겠습니다.", rage:true},
+      {npc:"6시? 누가 6시에 가냐.", reply:"네 마무리하고 가겠습니다.", rage:true},
+      {npc:"김 대리, 나 커피 한 잔만. 일이 많아.", reply:"네 바로 사오겠습니다.", rage:false},
+      {npc:"그리고 내 차 좀 빼줘. 키 여기.", reply:"네 빼놓겠습니다 팀장님.", rage:true},
+      {npc:"요즘 네 태도에 기대가 없어.", reply:"더 노력하겠습니다.", rage:false},
+      {npc:"더 너답게, 새벽까지 해.", reply:"네 새겨두겠습니다.", rage:true},
+      {npc:"표정이 왜 그래? 불만 있어?", reply:"아니에요 괜찮습니다.", rage:true},
+      {npc:"주말에 워크숍 잡았으니까 나와.", reply:"네 일정 비우겠습니다.", rage:true},
+      {npc:"김 대리 어디서 치이지 못하는 거야.", reply:"명심하겠습니다 팀장님.", rage:true}
+    ]
+  },
+  {
+    id:"jayoungeop", job:"자영업자", npc:"진상손님", difficulty:3,
+    summary:"사용한 물건 환불 요구, 반말·갑질, 리뷰 폭발 협박.",
+    lines:[
+      {npc:"야, 사장 어딨어. 사장 나오라 그래.", reply:"네 제가 사장입니다 손님.", rage:true},
+      {npc:"이거 이미 쓴 건데 환불해줘.", reply:"확인 도와드리겠습니다.", rage:false},
+      {npc:"영수증? 그런 거 없어.", reply:"규정 상 확인이 필요합니다.", rage:true},
+      {npc:"뭐? 사용한 건 환불 안 된다고?", reply:"사정 부탁드립니다 손님.", rage:true},
+      {npc:"장사 그렇게 해서 돈 벌겠어?", reply:"최대한 도와드리겠습니다.", rage:true},
+      {npc:"나 여기 단골이야. 얼마나 왔는지 알아?", reply:"더 감사드리고 있습니다.", rage:false},
+      {npc:"야, 나 몇 살이야. 어린 것이.", reply:"불편을 드려 죄송합니다.", rage:true},
+      {npc:"부모가 그렇게 가르쳤어?", reply:"친절하게 말씀해주세요.", rage:true},
+      {npc:"서비스 더 줘. 단골이잖아.", reply:"가능한 선에서 챙겨드릴게요.", rage:false},
+      {npc:"계산이 왜 이래. 바가지 아니야?", reply:"다시 확인해드리겠습니다.", rage:true},
+      {npc:"나 기분 나쁘면 다 알게 된다.", reply:"기분 상하셨다면 죄송합니다.", rage:false},
+      {npc:"별점 1점 줄 거야. 리뷰에 다 쓸 거야.", reply:"의견 감사합니다 손님.", rage:true},
+      {npc:"SNS에도 올린다, 다들 알게.", reply:"네 알겠습니다 손님.", rage:true},
+      {npc:"사장 불러. 빨리. 가만 안 둬.", reply:"제가 끝까지 돕겠습니다.", rage:true},
+      {npc:"이 동네 소문 다 낼 거니까 각오해.", reply:"편히 들어가세요 손님.", rage:true}
+    ]
+  },
+  {
+    id:"gongmuwon", job:"공무원", npc:"민원인", difficulty:4,
+    summary:"규정인 걸 따지기, '세금으로 월급' 인신공격, 상관 호출.",
+    lines:[
+      {npc:"이거 오늘 안에 처리되는 거 맞죠?", reply:"절차대로 안내드리겠습니다.", rage:false},
+      {npc:"뭐? 서류가 하나 빠졌다고?", reply:"한 가지만 더 필요합니다.", rage:true},
+      {npc:"그걸 왜 이제야 말해. 직접 말했어야지.", reply:"미리 안내 못 드려 죄송합니다.", rage:true},
+      {npc:"다른 데는 그냥 해줬는데?", reply:"규정은 동일하게 적용됩니다.", rage:true},
+      {npc:"규정? 그래서 규정. 사람이 먼저지.", reply:"기준을 안내드리는 게 역할입니다.", rage:true},
+      {npc:"내가 세금을 얼마나 냈는데.", reply:"최대한 돕겠습니다 민원인님.", rage:false},
+      {npc:"그 세금으로 월급 받으면서 이것도 못 해?", reply:"가능한 방법을 찾아보겠습니다.", rage:true},
+      {npc:"당신 이름 뭐야. 명찰 봐봐.", reply:"네 여기 있습니다 민원인님.", rage:true},
+      {npc:"상사 불러. 책임자 나오라 그래.", reply:"담당자에게 안내드리겠습니다.", rage:true},
+      {npc:"번호표? 내가 왜 번호를 뽑아.", reply:"순서대로 도와드리겠습니다.", rage:true},
+      {npc:"나 시간 없어. 빨리빨리 좀 해.", reply:"최대한 빠르게 처리하겠습니다.", rage:true},
+      {npc:"공무원이 어딜 가면 되는 거야?", reply:"불편을 드려 죄송합니다.", rage:true},
+      {npc:"여기서 인사청탁 써.", reply:"그런 절차는 없습니다.", rage:true},
+      {npc:"세금 다운된다. 내 세금이 아깝다.", reply:"성실히 처리하겠습니다.", rage:true},
+      {npc:"당신 같은 사람 때문에 나라가 이 모양.", reply:"다음에 더 도와드리겠습니다.", rage:true}
+    ]
+  },
+  {
+    id:"seonsaengnim", job:"선생님", npc:"학부모", difficulty:5,
+    summary:"내 아이만 특별대우, 밤늦은 연락, 교육청 민원 협박.",
+    lines:[
+      {npc:"선생님, 우리 아이가 왜 떨어졌냐고요.", reply:"무슨 일인지 살펴보겠습니다.", rage:false},
+      {npc:"대체 학교에서 무슨 일이 있었던 거죠?", reply:"확인 후 말씀드리겠습니다.", rage:true},
+      {npc:"우리 애는 그럴 애가 아닌데요.", reply:"아이 입장도 들어보겠습니다.", rage:true},
+      {npc:"분명 다른 애가 먼저 그랬을 거예요.", reply:"양쪽 모두 확인하겠습니다.", rage:true},
+      {npc:"선생님이 우리 애를 정말 미워하는 거 아닌가요?", reply:"공평하게 지도하고 있습니다.", rage:true},
+      {npc:"자리 좀 앞으로 바꿔주세요.", reply:"한번 검토해보겠습니다.", rage:false},
+      {npc:"금요일에 우리 애 먼저 챙겨주시고요.", reply:"순서대로 지도하고 있습니다.", rage:true},
+      {npc:"숙제가 너무 많아요. 전 선생이 없었어요.", reply:"양을 한번 살펴보겠습니다.", rage:false},
+      {npc:"지금 통화 괜찮으시죠? 밤 11시인데.", reply:"내일 다시 말씀 나눠요.", rage:true},
+      {npc:"주말에도 문자 보내면 바로바로요.", reply:"근무 시간에 답변드리겠습니다.", rage:true},
+      {npc:"생활기록부에 좋은 말만 써주세요.", reply:"사실대로 작성하겠습니다.", rage:true},
+      {npc:"선생님 그렇게 가르치시면 안 되죠.", reply:"의견 참고하겠습니다.", rage:true},
+      {npc:"이거 교육청에 민원 넣어야겠다고요.", reply:"필요하시면 그렇게 하세요.", rage:true},
+      {npc:"선생님 태도가 아쉬우세요.", reply:"더 노력하겠습니다 어머니.", rage:true},
+      {npc:"이러니 공교육이 무너진다는 거예요.", reply:"좋은 하루 보내세요 어머니.", rage:true}
+    ]
+  },
+  {
+    id:"daehagwonsaeng", job:"대학원생", npc:"교수님", difficulty:6,
+    summary:"무한 수정, 주말 호출, 논문 가로채기, 인격 모드.",
+    lines:[
+      {npc:"이거 읽다가 이 거 맞아? 수준이 이거뿐이야?", reply:"보완해서 다시 쓰겠습니다.", rage:true},
+      {npc:"다시 써. 처음부터 다시.", reply:"네 처음부터 다시 하겠습니다.", rage:true},
+      {npc:"내가 언제야. 니가 잘못 이해한 거지.", reply:"제가 다시 확인하겠습니다.", rage:true},
+      {npc:"주말에 한번 자료 정리 좀 해둬.", reply:"네 정리해두겠습니다.", rage:false},
+      {npc:"일요일 오후까지. 당연하지?", reply:"네 맞춰보겠습니다 교수님.", rage:true},
+      {npc:"이번 논문 1저자는 내 이름으로 올리고.", reply:"네 알겠습니다 교수님.", rage:true},
+      {npc:"다른 애들 2저자야. 원래 다 그렇게 해.", reply:"네 그렇게 하겠습니다.", rage:true},
+      {npc:"저 앞 학생은 벌써 학회 됐는데.", reply:"더 분발하겠습니다.", rage:true},
+      {npc:"밤 12시 메일에 답장이 없어.", reply:"확인이 늦어 죄송합니다.", rage:true},
+      {npc:"연구실이 그렇게 게을러서 되겠어.", reply:"더 성실히 하겠습니다.", rage:true},
+      {npc:"실험 데이터 다시 다 돌려.", reply:"네 다시 돌리겠습니다.", rage:true},
+      {npc:"졸업하고 싶으면 시키는 대로 해.", reply:"네 따르겠습니다 교수님.", rage:true},
+      {npc:"니들 졸업에 내 손이 달린 거 알지?", reply:"네 부탁드립니다 교수님.", rage:true},
+      {npc:"이런 것도 못 하면서 박사를 한다고?", reply:"부족한 점을 채우겠습니다.", rage:true},
+      {npc:"불만 없으면 그만 가.", reply:"아니에요 끝까지 하겠습니다.", rage:true}
+    ]
+  }
+];
+
+/* ===================== 게임 로직 ===================== */
+const $ = id => document.getElementById(id);
+const views = ['title-view','select-view','play-view','result-view'];
+function show(v){ views.forEach(x=>$(x).classList.toggle('active', x===v)); }
+
+let clockMin = 9*60;
+function fmtClock(m){ const h=Math.floor(m/60)%24,mm=m%60; return String(h).padStart(2,'0')+':'+String(mm).padStart(2,'0'); }
+
+function goSelect(){
+  show('select-view');
+  const grid=$('jobgrid'); grid.innerHTML='';
+  SCENARIOS.forEach(s=>{
+    const c=document.createElement('div');
+    c.className='jobcard';
+    c.innerHTML=`<div class="jb">${s.job}</div>
+      <div class="npc">상대: ${s.npc}</div>
+      <div class="sm">${s.summary}</div>
+      <div class="stars">${'★'.repeat(s.difficulty)}${'☆'.repeat(6-s.difficulty)}</div>`;
+    c.onclick=()=>startGame(s);
+    grid.appendChild(c);
+  });
+}
+
+let G=null;
+const SENSOR_TYPES={
+  albabaite:'button', hwesawon:'shake', jayoungeop:'press',
+  gongmuwon:'button', seonsaengnim:'press', daehagwonsaeng:'shake'
+};
+
+function startGame(s){
+  show('play-view');
+  $('hudJob').textContent=s.job;
+  $('hudNpc').textContent=s.npc;
+  clockMin=9*60;
+  G={
+    sc:s, sensor:SENSOR_TYPES[s.id]||'shake',
+    lineIdx:0, charIdx:0, wrong:false,
+    lives:3, stress:0,
+    stressRate:0.18+s.difficulty*0.07,
+    rageBonus:3+s.difficulty*1.0,
+    timeLeft:180, completedChars:0,
+    totalChars:s.lines.reduce((a,l)=>a+l.reply.length,0),
+    disrupted:false, finished:false,
+    ticker:null, stressTimer:null
+  };
+  renderLives(); updateGauge();
+  $('stage').innerHTML='';
+  pushBubble(s.lines[0]); loadLine();
+  $('disrupt').classList.remove('show');
+  const hi=$('hiddenInput'); hi.value=''; hi.focus();
+  document.addEventListener('keydown',onKey);
+  hi.addEventListener('input',onType);
+  G.focusGuard=setInterval(()=>{ if(!G.finished&&!G.disrupted) hi.focus(); },400);
+  $('app').addEventListener('mousedown',refocus);
+  G.ticker=setInterval(tick,1000);
+  G.stressTimer=setInterval(passiveStress,700);
+  $('timer').textContent=fmtTime(G.timeLeft);
+}
+
+function fmtTime(s){ const m=Math.floor(s/60); return String(m).padStart(2,'0')+':'+String(s%60).padStart(2,'0'); }
+
+function renderLives(){
+  let h=''; for(let i=0;i<3;i++) h+=i<G.lives?'❤':'<span class="lost">❤</span>';
+  $('lives').innerHTML=h;
+}
+
+function pushBubble(line){
+  const stage=$('stage');
+  const b=document.createElement('div');
+  b.className='bubble'+(line.rage?' rage':'');
+  b.textContent=line.npc;
+  stage.appendChild(b);
+  while(stage.children.length>3) stage.removeChild(stage.firstChild);
+  stage.scrollTop=stage.scrollHeight;
+}
+
+function loadLine(){ G.charIdx=0; G.wrong=false; renderPrompt(); $('tstatus').textContent='대답을 따라 입력하세요…'; }
+
+function renderPrompt(){
+  const line=G.sc.lines[G.lineIdx].reply;
+  let h='';
+  for(let i=0;i<line.length;i++){
+    if(i<G.charIdx) h+=`<span class="done">${esc(line[i])}</span>`;
+    else if(i===G.charIdx) h+=`<span class="${G.wrong?'wrong':'cur'}">${esc(line[i]===' '?' ':line[i])}</span>`;
+    else h+=`<span class="todo">${esc(line[i])}</span>`;
+  }
+  $('prompt').innerHTML=h;
+}
+function esc(c){ return c.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function refocus(){ if(G&&!G.finished&&!G.disrupted) $('hiddenInput').focus(); }
+
+function onKey(e){
+  if(!G||G.finished) return;
+  if(G.disrupted){ handleSensorKey(e); }
+}
+
+function onType(e){
+  if(!G||G.finished||G.disrupted){ $('hiddenInput').value=''; return; }
+  const buf=$('hiddenInput').value;
+  if(!buf) return;
+  const line=G.sc.lines[G.lineIdx].reply;
+  for(const ch of buf){
+    if(G.charIdx>=line.length) break;
+    const expected=line[G.charIdx];
+    if(ch===expected){
+      G.charIdx++; G.wrong=false; G.completedChars++;
+      addStress(G.stressRate+(G.sc.lines[G.lineIdx].rage?G.rageBonus*0.12:0));
+    } else if(ch===' '&&expected===' '){
+      G.charIdx++; G.completedChars++;
+    } else {
+      G.wrong=true; addStress(0.6);
+    }
+    if(G.charIdx>=line.length){ renderPrompt(); $('hiddenInput').value=''; advanceLine(); return; }
+  }
+  $('hiddenInput').value='';
+  renderPrompt();
+  $('tstatus').textContent=G.wrong?'오타가 있지만 계속 진행 중…':'대답을 따라 입력하세요…';
+}
+
+function advanceLine(){
+  const wasRage=G.sc.lines[G.lineIdx].rage;
+  if(wasRage) addStress(G.rageBonus);
+  G.lineIdx++;
+  if(G.lineIdx>=G.sc.lines.length){ endGame(true); return; }
+  pushBubble(G.sc.lines[G.lineIdx]); loadLine();
+}
+
+function addStress(v){
+  if(G.disrupted||G.finished) return;
+  G.stress=Math.min(100,G.stress+v); updateGauge();
+  if(G.stress>=100) triggerDisruption();
+}
+function passiveStress(){
+  if(G.disrupted||G.finished) return;
+  addStress(0.18+(G.sc.lines[G.lineIdx]?.rage?0.25:0));
+}
+function updateGauge(){ $('gfill').style.width=G.stress+'%'; $('gpct').textContent=Math.round(G.stress)+'%'; }
+
+function triggerDisruption(){
+  G.disrupted=true;
+  $('hiddenInput').value=''; $('hiddenInput').blur();
+  $('screen').classList.add('shake');
+  setTimeout(()=>$('screen').classList.remove('shake'),420);
+  $('tstatus').textContent='⚠ 입력 잠깐 ⚠ 진정하세요';
+  buildSensor();
+  $('disrupt').classList.add('show');
+}
+
+function buildSensor(){
+  const box=$('sensorbox');
+  const type=G.sensor;
+  if(type==='shake'){
+    G.relief=0;
+    $('disruptDesc').innerHTML='상대의 말이 머릿속에 가득 맴돕니다.<br>심박을 흔들어 스트레스를 털어내세요.';
+    const hint=arduinoConnected?'아두이노 틸트센서를 흔드세요!':'<span class="keycap" id="cap">SPACE</span>를 빠르게 연타!';
+    box.innerHTML=`<div class="inst">SHAKE — 빠르게!</div>
+      <div class="relief"><div class="rf" id="rf" style="width:0%"></div></div>
+      <div class="keyhint">${hint}</div>`;
+  } else if(type==='press'){
+    G.relief=0; G.pressing=false;
+    $('disruptDesc').innerHTML='숨이 꽉 막힙니다.<br>꾹 눌러 내세요, 게이지를 이 구간에 맞추세요.';
+    const hint=arduinoConnected?'아두이노 BTN1을 꾹 눌렀다 놓으세요':'<kbd style="color:#b8231a">SPACE</kbd>를 꾹 눌러 게이지를 채우세요';
+    box.innerHTML=`<div class="inst">PRESS — 꾹 누르기</div>
+      <div class="relief" style="position:relative;background:rgba(255,255,255,.25)">
+        <div style="position:absolute;left:60%;width:25%;top:0;bottom:0;background:rgba(91,157,122,.6);border-radius:7px"></div>
+        <div class="rf" id="rf" style="width:0%;background:#fff;opacity:.8"></div>
+      </div>
+      <div class="keyhint">${hint}<br>이 구간(60~85%)에서 놓으면 성공</div>`;
+  } else {
+    G.seq=[]; G.seqPos=0;
+    // 아두이노 연결 시 버튼이 3개뿐이므로 1~3 범위로 제한
+    const maxN=arduinoConnected?3:9;
+    for(let i=0;i<4;i++) G.seq.push(1+Math.floor(Math.random()*maxN));
+    $('disruptDesc').innerHTML='목구멍까지 차올랐습니다.<br>정해진 순서대로 눌러 가면을 다시 쓰세요.';
+    renderNumpad();
+  }
+}
+
+function renderNumpad(){
+  const box=$('sensorbox');
+  const maxN=arduinoConnected?3:9;
+  let pad='';
+  for(let n=1;n<=maxN;n++) pad+=`<div class="np" data-n="${n}" id="np${n}">${n}</div>`;
+  const hint=arduinoConnected?'아두이노 BTN1=1 BTN2=2 BTN3=3':'키보드 숫자키로 입력';
+  box.innerHTML=`<div class="inst">BUTTONS — 순서대로:
+    ${G.seq.map((n,i)=>`<span class="keycap ${i<G.seqPos?'hit':''}" id="sq${i}">${n}</span>`).join('')}</div>
+    <div class="numpad">${pad}</div>
+    <div class="keyhint">${hint}</div>`;
+  highlightNext();
+}
+function highlightNext(){
+  document.querySelectorAll('.np').forEach(e=>e.classList.remove('next'));
+  if(G.seqPos<G.seq.length){ const el=$('np'+G.seq[G.seqPos]); if(el) el.classList.add('next'); }
+}
+
+function handleSensorKey(e){
+  const type=G.sensor;
+  if(type==='shake'){
+    if(e.code==='Space'||e.key===' '){
+      e.preventDefault();
+      G.relief=Math.min(100,G.relief+9);
+      const rf=$('rf'); if(rf) rf.style.width=G.relief+'%';
+      const cap=$('cap'); if(cap){cap.classList.add('hit');setTimeout(()=>cap.classList.remove('hit'),60);}
+      if(G.relief>=100) resolveDisruption();
+    }
+  } else if(type==='press'){
+    if(e.code==='Space'||e.key===' '){
+      e.preventDefault();
+      if(!G.pressing){
+        G.pressing=true; G.relief=0;
+        G.pressInt=setInterval(()=>{
+          G.relief=Math.min(100,G.relief+3.2);
+          const rf=$('rf'); if(rf) rf.style.width=G.relief+'%';
+          if(G.relief>=100){ clearInterval(G.pressInt); G.pressing=false; failSensorAttempt('너무 꾹 눌렀어요! 다시.'); }
+        },40);
+      }
+    }
+  } else if(type==='button'){
+    if(e.key>='1'&&e.key<='9'){
+      e.preventDefault();
+      const n=parseInt(e.key,10);
+      const want=G.seq[G.seqPos];
+      const el=$('np'+n);
+      if(n===want){
+        if(el){el.classList.add('hit');setTimeout(()=>el.classList.remove('hit'),120);}
+        const tag=$('sq'+G.seqPos); if(tag) tag.classList.add('hit');
+        G.seqPos++; highlightNext();
+        if(G.seqPos>=G.seq.length) resolveDisruption();
+      } else {
+        if(el){el.style.background='#ffd0cb';setTimeout(()=>el.style.background='#fff',150);}
+        G.seqPos=0;
+        document.querySelectorAll('[id^=sq]').forEach(t=>t.classList.remove('hit'));
+        highlightNext();
+      }
+    }
+  }
+}
+
+document.addEventListener('keyup',e=>{
+  if(!G||!G.disrupted||G.sensor!=='press') return;
+  if(e.code==='Space'||e.key===' '){
+    if(G.pressing){
+      clearInterval(G.pressInt); G.pressing=false;
+      if(G.relief>=60&&G.relief<=85) resolveDisruption();
+      else failSensorAttempt('구간을 벗어났어요! 다시.');
+    }
+  }
+});
+
+function failSensorAttempt(msg){
+  G.relief=0; const rf=$('rf'); if(rf) rf.style.width='0%';
+  $('disruptDesc').innerHTML=msg+'<br>다시 시도하세요.';
+}
+
+function resolveDisruption(){
+  G.disrupted=false;
+  $('disrupt').classList.remove('show');
+  G.stress=Math.max(0,G.stress-70); updateGauge();
+  $('hiddenInput').value=''; $('hiddenInput').focus();
+  $('tstatus').textContent='휴… 다시 일하세요.';
+  floatText('참았다','#5b9d7a');
+}
+
+function floatText(txt,color){
+  const el=document.createElement('div');
+  el.className='floatmsg'; el.textContent=txt; el.style.color=color;
+  el.style.left='50%'; el.style.top='52%'; el.style.transform='translateX(-50%)';
+  $('screen').appendChild(el);
+  setTimeout(()=>el.remove(),1000);
+}
+
+function tick(){
+  if(G.finished) return;
+  clockMin++; $('clock').textContent=fmtClock(clockMin);
+  if(G.disrupted){
+    G.timeLeft-=1;
+    G.disruptHold=(G.disruptHold||0)+1;
+    if(G.disruptHold>=6){ loseLife('폭발을 못 참았다'); G.disruptHold=0; }
+  } else {
+    G.disruptHold=0; G.timeLeft-=1;
+  }
+  $('timer').textContent=fmtTime(Math.max(0,G.timeLeft));
+  if(G.timeLeft<=0) endGame(false);
+}
+
+function loseLife(reason){
+  G.lives--; renderLives(); floatText('-1 ❤','#e2493b');
+  if(G.disrupted){ G.disrupted=false; $('disrupt').classList.remove('show'); G.stress=70; updateGauge(); }
+  if(G.lives<=0) endGame(false,reason);
+}
+
+function endGame(win,reason){
+  if(G.finished) return;
+  G.finished=true;
+  clearInterval(G.ticker); clearInterval(G.stressTimer);
+  if(G.pressInt) clearInterval(G.pressInt);
+  if(G.focusGuard) clearInterval(G.focusGuard);
+  document.removeEventListener('keydown',onKey);
+  $('hiddenInput').removeEventListener('input',onType);
+  $('app').removeEventListener('mousedown',refocus);
+  $('hiddenInput').blur();
+  show('result-view');
+  const pct=Math.round(100*G.completedChars/G.totalChars);
+  const base=50+G.sc.difficulty*15;
+  if(win){
+    $('rtitle').textContent='무사히 퇴근';
+    $('rtitle').className='rtitle win';
+    const bonus=G.lives*8, pay=base+bonus;
+    $('paystub').innerHTML=`
+      <div class="row"><span>${G.sc.job} 일비</span><span>${base}만 메타</span></div>
+      <div class="row"><span>인내 보너스 (남은 ❤×8)</span><span>+${bonus}</span></div>
+      <div class="row"><span>스크립트 달성률</span><span>${pct}%</span></div>
+      <div class="row total"><span>오늘의 임금</span><span>${pay}만 메타</span></div>`;
+    $('rsub').textContent='가면을 끝까지 벗지 않았다. 속으로 욕해댔지만, 오늘도 사회인으로 이어남았다.';
+  } else {
+    $('rtitle').textContent='감정 폭발';
+    $('rtitle').className='rtitle lose';
+    $('paystub').innerHTML=`
+      <div class="row"><span>${G.sc.job} 일비</span><span>${base}만 메타</span></div>
+      <div class="row"><span>사유</span><span>${reason||'시간 초과'}</span></div>
+      <div class="row"><span>스크립트 달성률</span><span>${pct}%</span></div>
+      <div class="row total"><span>오늘의 임금</span><span>0만 메타</span></div>`;
+    $('rsub').textContent='참다 참다 터져버렸다. 속으로 연습했지만… 임금은 날아갔다. 내일 다시 가면을 쓸 수 있을까?';
+  }
+}
+
+/* ===================== Web Serial API (아두이노 연결) ===================== */
+let serialPort = null;
+let serialReader = null;
+let arduinoConnected = false;
+
+async function toggleSerial(){
+  if(arduinoConnected){
+    // 연결 해제
+    try { if(serialReader) await serialReader.cancel(); } catch(e){}
+    try { if(serialPort) await serialPort.close(); } catch(e){}
+    serialPort=null; serialReader=null; arduinoConnected=false;
+    $('serialBtn').textContent='🔌 아두이노 연결';
+    $('serialBtn').classList.remove('connected');
+    $('serialStatus').textContent='';
+    return;
+  }
+
+  if(!('serial' in navigator)){
+    alert('Web Serial API를 지원하지 않습니다.\nChrome 또는 Edge 브라우저로 열어주세요.\n(file:// 로 열면 안 됨 → 로컬 서버 필요)');
+    return;
+  }
+
+  try {
+    serialPort = await navigator.serial.requestPort();
+    await serialPort.open({ baudRate: 9600 });
+    arduinoConnected = true;
+    $('serialBtn').textContent='✅ 연결됨';
+    $('serialBtn').classList.add('connected');
+    $('serialStatus').textContent='아두이노 연결 완료';
+    readSerial();
+  } catch(e){
+    if(e.name !== 'NotFoundError') alert('연결 실패: ' + e.message);
+  }
+}
+
+async function readSerial(){
+  const decoder = new TextDecoderStream();
+  const pipePromise = serialPort.readable.pipeTo(decoder.writable);
+  const reader = decoder.readable.getReader();
+  serialReader = reader;
+
+  let buf = '';
+  try {
+    while(true){
+      const { value, done } = await reader.read();
+      if(done) break;
+      buf += value;
+      const lines = buf.split('\n');
+      buf = lines.pop(); // 마지막 미완성 라인 보존
+      for(const line of lines){
+        const msg = line.trim();
+        if(msg) handleArduinoMsg(msg);
+      }
+    }
+  } catch(e){
+    // 연결 끊김
+    if(arduinoConnected){
+      arduinoConnected = false;
+      $('serialBtn').textContent='🔌 아두이노 연결';
+      $('serialBtn').classList.remove('connected');
+      $('serialStatus').textContent='연결 끊김';
+    }
+  }
+}
+
+// 아두이노 메시지 → 게임 액션 매핑
+function handleArduinoMsg(msg){
+  // 게임 중 + 폭발 상태에서만 처리
+  if(!G || G.finished || !G.disrupted) return;
+
+  const type = G.sensor;
+
+  if(msg === 'SHAKE' && type === 'shake'){
+    // 틸트 흔들기 → SPACE 연타 효과
+    handleSensorKey({ code:'Space', key:' ', preventDefault:()=>{} });
+
+  } else if(msg.startsWith('HOLD:') && type === 'press'){
+    // BTN1 홀드 중 게이지 업데이트
+    const val = parseInt(msg.split(':')[1]) || 0;
+    G.relief = val;
+    G.pressing = true;
+    const rf = $('rf'); if(rf) rf.style.width = val + '%';
+    if(val >= 100){ failSensorAttempt('너무 꾹 눌렀어요! 다시.'); G.pressing = false; }
+
+  } else if(msg.startsWith('RELEASE:') && type === 'press'){
+    // BTN1 뗐을 때 → 성공/실패 판정
+    const val = parseInt(msg.split(':')[1]) || 0;
+    G.relief = val;
+    G.pressing = false;
+    if(val >= 60 && val <= 85) resolveDisruption();
+    else failSensorAttempt('구간을 벗어났어요! 다시.');
+
+  } else if(msg.startsWith('BTN:') && type === 'button'){
+    // 버튼 시퀀스
+    const n = parseInt(msg.split(':')[1]);
+    if(n >= 1 && n <= 9){
+      handleSensorKey({ key: String(n), preventDefault:()=>{} });
+    }
+  }
+}
+</script>
+</body>
+</html>
