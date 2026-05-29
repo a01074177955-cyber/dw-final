@@ -1,0 +1,770 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>오늘도 참는다</title>
+<style>
+@font-face{font-family:'neodgm';src:url('data/neodgm_code.woff') format('woff');}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{width:100%;height:100%;overflow:hidden;background:#000;}
+
+#game{
+  position:absolute;
+  width:1920px;height:1080px;
+  transform-origin:top left;
+  overflow:hidden;
+}
+#bg{position:absolute;inset:0;background-size:cover;background-position:center;}
+
+/* ── SJ ── */
+#sj-wrap{
+  position:absolute;left:840px;top:0;
+  width:1080px;height:1080px;
+  display:none;z-index:10;
+}
+#sj-img{width:1080px;height:1080px;object-fit:contain;object-position:bottom;}
+#sj-img.slide-in{animation:sj-slide .3s ease forwards;}
+@keyframes sj-slide{from{transform:translateY(60px);opacity:0;}to{transform:translateY(0);opacity:1;}}
+#sj-img.bang-in{animation:sj-bang .25s ease forwards;}
+@keyframes sj-bang{0%{transform:scale(.5);opacity:0;}60%{transform:scale(1.1);}100%{transform:scale(1);opacity:1;}}
+
+/* ── STRGRAPH ── */
+#str-graph{
+  position:absolute;left:840px;top:200px;
+  width:280px;opacity:0;z-index:8;pointer-events:none;
+}
+#str-graph.sgshow{animation:sg-pop .3s ease forwards;}
+@keyframes sg-pop{
+  0%{opacity:0;transform:scale(.5) rotate(-10deg);}
+  60%{transform:scale(1.1) rotate(2deg);}
+  100%{opacity:1;transform:scale(1) rotate(0);}
+}
+
+/* ── STATUS (mny + str only, no rpt) ── */
+#status{
+  position:absolute;left:0;top:0;
+  z-index:20;display:none;
+  padding:60px;
+  background:url('data/status.png') no-repeat top left;
+}
+.stat-row{display:flex;align-items:center;gap:8px;margin-bottom:20px;}
+.stat-row img{width:80px;height:80px;image-rendering:pixelated;object-fit:contain;}
+.stat-val{
+  font-family:'neodgm',monospace;font-size:60px;color:#fff;
+  text-shadow:3px 3px 0 #000,-3px -3px 0 #000,3px -3px 0 #000,-3px 3px 0 #000;
+  min-width:60px;
+}
+
+/* ── CHAT BOX ── */
+#chat{
+  position:absolute;left:0;top:571px;
+  width:1920px;height:509px;
+  z-index:30;display:none;
+}
+#chat-frame{
+  position:absolute;top:0;left:0;
+  width:1920px;height:509px;object-fit:fill;
+}
+#chat-name{
+  position:absolute;
+  left:238px;top:58px;width:317px;height:91px;
+  font-family:'neodgm',monospace;font-size:60px;color:#fff;
+  display:flex;align-items:center;justify-content:center;
+  z-index:31;pointer-events:none;
+}
+#chat-text{
+  position:absolute;
+  left:223px;top:168px;width:1481px;
+  font-family:'neodgm',monospace;font-size:60px;
+  color:#fff;line-height:90px;
+  white-space:pre-wrap;
+  z-index:31;pointer-events:none;
+}
+#chat-text.narr{color:rgba(255,255,255,.55);}
+#chat-text.boss{color:#FF6E34;}
+
+/* Typing wrap */
+#type-wrap{
+  position:absolute;left:223px;top:168px;width:1481px;
+  display:none;flex-direction:column;gap:8px;
+  z-index:32;pointer-events:all;
+}
+#type-wrap.active{display:flex;}
+#type-top{position:relative;width:100%;height:90px;}
+#type-hint{
+  position:absolute;top:0;left:0;width:100%;height:100%;
+  font-family:'neodgm',monospace;font-size:60px;
+  color:rgba(255,255,255,.22);line-height:90px;
+  pointer-events:none;overflow:hidden;white-space:nowrap;
+}
+#type-input{
+  position:absolute;top:0;left:0;width:100%;height:100%;
+  background:transparent;border:none;outline:none;
+  font-family:'neodgm',monospace;font-size:60px;
+  color:#fff;line-height:90px;caret-color:#ff7700;padding:0;
+}
+#type-label{
+  font-family:'neodgm',monospace;font-size:18px;
+  color:rgba(255,255,255,.55);pointer-events:none;
+}
+#adv-hint{
+  position:absolute;right:110px;bottom:22px;
+  font-family:'neodgm',monospace;font-size:24px;
+  color:rgba(255,150,0,.85);z-index:32;
+  animation:blink 1.2s ease infinite;
+}
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:.25;}}
+
+/* ── FADE ── */
+#fade{
+  position:absolute;inset:0;z-index:100;
+  background:#000;opacity:0;pointer-events:none;
+  transition:opacity .4s ease;
+}
+#fade.in{opacity:1;pointer-events:all;}
+
+/* ── INTRO ── */
+#intro{position:absolute;inset:0;z-index:200;background:#000;}
+#intro-bg{
+  position:absolute;inset:0;
+  background:url('data/BG/intro.png') center/cover;
+  opacity:0;transition:opacity 1.2s;
+}
+#sg-intro{
+  position:absolute;left:50%;top:50%;
+  width:min(520px,48vw);opacity:0;
+  transform:translate(-50%,-50%);z-index:1;
+}
+#sg-intro.appear{animation:sg-pop .5s ease forwards;}
+#title-img{
+  position:absolute;left:50%;top:50%;
+  width:min(640px,60vw);opacity:0;z-index:2;
+  transform:translate(-50%,-50%) scale(1.5);
+  cursor:pointer;pointer-events:none;
+  filter:drop-shadow(0 6px 32px rgba(0,0,0,.8));
+}
+#title-img.bang{
+  animation:title-bang .55s cubic-bezier(.22,.61,.36,1) forwards;
+  pointer-events:all;
+}
+@keyframes title-bang{
+  0%  {transform:translate(-50%,-50%) scale(1.55) rotate(-3deg);opacity:0;}
+  45% {transform:translate(-50%,-50%) scale(.93)  rotate(.5deg);opacity:1;}
+  75% {transform:translate(-50%,-50%) scale(1.04);opacity:1;}
+  100%{transform:translate(-50%,-50%) scale(1);   opacity:1;}
+}
+#intro-hint{
+  position:absolute;bottom:5%;width:100%;text-align:center;
+  font-family:'neodgm',monospace;font-size:22px;
+  color:rgba(255,255,255,.5);animation:blink 1.4s infinite;display:none;
+}
+
+/* ── ENDING CONNECT (Figma: Endling_connect, #363636 bg) ── */
+#end-connect{
+  position:absolute;inset:0;z-index:130;
+  background:#363636;
+  display:none;
+  align-items:center;justify-content:center;
+}
+#ec-inner{
+  display:flex;flex-direction:column;align-items:center;gap:36px;
+  width:570px;
+}
+#ec-icons{display:flex;gap:54px;}
+#ec-icons img{
+  width:205px;height:205px;
+  object-fit:contain;image-rendering:pixelated;
+}
+#ec-text{
+  font-family:'neodgm',monospace;font-size:60px;
+  color:#FF6E34;text-align:center;line-height:90px;
+  white-space:pre-wrap;width:570px;
+}
+
+/* ── ENDING restart btn ── */
+#ending{
+  position:absolute;bottom:80px;left:0;right:0;
+  z-index:150;display:none;justify-content:center;
+}
+#ending.show{display:flex;}
+.again-btn{
+  font-family:'neodgm',monospace;font-size:28px;
+  background:rgba(0,0,0,.7);border:2px solid #ff6600;
+  color:#ff6600;padding:14px 36px;cursor:pointer;
+}
+.again-btn:hover{background:rgba(255,102,0,.18);}
+
+/* ── SERIAL ── */
+#serial-btn{
+  position:absolute;bottom:12px;right:14px;z-index:50;
+  font-family:'neodgm',monospace;font-size:18px;
+  background:rgba(0,0,0,.6);border:1px solid #555;
+  color:#888;padding:4px 12px;cursor:pointer;
+}
+#serial-btn.on{border-color:#5b9d7a;color:#5b9d7a;}
+</style>
+</head>
+<body>
+<div id="game">
+  <div id="fade"></div>
+
+  <!-- INTRO -->
+  <div id="intro">
+    <div id="intro-bg"></div>
+    <img id="sg-intro" src="data/strGraph.png" alt="">
+    <img id="title-img" src="data/title.png" alt="오늘도 참는다" onclick="onTitleClick()">
+    <div id="intro-hint">클릭해서 출근하기</div>
+  </div>
+
+  <!-- GAME -->
+  <div id="bg"></div>
+  <img id="str-graph" src="data/strGraph.png" alt="">
+  <div id="sj-wrap"><img id="sj-img" src="data/SJ/default.png" alt="사장님"></div>
+
+  <!-- STATUS (mny + str only) -->
+  <div id="status">
+    <div class="stat-row"><img src="data/icon/mny.png" alt="월급"><span class="stat-val" id="mv">50</span></div>
+    <div class="stat-row"><img src="data/icon/str.png" alt="스트레스"><span class="stat-val" id="sv">50</span></div>
+  </div>
+
+  <!-- CHAT BOX -->
+  <div id="chat">
+    <img id="chat-frame" src="data/chat/chat.png" alt="">
+    <div id="chat-name"></div>
+    <div id="chat-text"></div>
+    <div id="type-wrap">
+      <div id="type-top">
+        <div id="type-hint"></div>
+        <input id="type-input" type="text" autocomplete="off" spellcheck="false">
+      </div>
+      <div id="type-label">[타이핑하세요]</div>
+    </div>
+    <div id="adv-hint">▼ Space</div>
+  </div>
+
+  <!-- ENDING CONNECT TRANSITION -->
+  <div id="end-connect">
+    <div id="ec-inner">
+      <div id="ec-icons">
+        <img src="data/icon/mny.png" alt="">
+        <img src="data/icon/str.png" alt="">
+      </div>
+      <div id="ec-text"></div>
+    </div>
+  </div>
+
+  <!-- ENDING restart btn -->
+  <div id="ending">
+    <button class="again-btn" onclick="restartGame()">다시 출근하기</button>
+  </div>
+
+  <button id="serial-btn" onclick="toggleSerial()">🔌</button>
+</div>
+
+<script>
+/* ── SCALE ── */
+function scaleGame(){
+  const s=Math.min(innerWidth/1920,innerHeight/1080);
+  const g=document.getElementById('game');
+  g.style.transform=`scale(${s})`;
+  g.style.left=((innerWidth-1920*s)/2)+'px';
+  g.style.top=((innerHeight-1080*s)/2)+'px';
+}
+addEventListener('resize',scaleGame);scaleGame();
+const $=id=>document.getElementById(id);
+
+/* ── SCENES ── */
+const SCENES=[
+  {id:'S0',bg:'home_out',sj:null,lines:[
+    {sp:null,tx:'아침 — 자취방',sty:'narr'},
+    {sp:null,tx:'삐삐삐-',sty:'narr'},
+    {sp:'나',tx:'하.. 또 출근해야 하네..',type:'pn',eff:{str:5}}
+  ]},
+  {id:'S1',bg:'job',sj:null,lines:[
+    {sp:'나',tx:'오늘은 제발 조용했으면 좋겠다...',type:'pn'},
+    {sp:null,tx:'(유니폼 착용)',sty:'narr'},
+    {sp:'사장님',tx:'어어, 그래.',sj:'default'},
+    {sp:'나',tx:'안녕하세요-',type:'p'},
+    {sp:'사장님',tx:'오늘 시재 좀 안맞는 것 같은데 이따 확인 한번 해주고.'},
+    {sp:'나',tx:'넵 알겠습니다',type:'p'},
+    {sp:'사장님',tx:'근데 표정이 왜 그래?'},
+    {sp:'사장님',tx:'출근하기 싫은 사람 같네.',sj:'upset'},
+    {type:'choice',
+     str:{ptx:'출근하기는 싫죠',btx:'뭐라고 했어? 요즘 애들 말투가 왜 그래??',bsj:'point',eff:{str:-10,mny:-3}},
+     end:{ptx:'아니에요! 오늘도 열심히 해보겠습니다.',btx:'그래, 말이라도 예쁘게 해야지.',bsj:'default',eff:{str:8,mny:2}}}
+  ]},
+  {id:'S2',bg:'job',sj:'upset',lines:[
+    {sp:'사장님',tx:'아 참, 내가 안그래도 얘기하려고 했는데.',sj:'upset'},
+    {sp:'나',tx:'네? 어떤...',type:'p'},
+    {sp:'사장님',tx:'어제 마감 청소 제대로 안 돼 있더라?'},
+    {sp:'사장님',tx:'내가 꼼꼼하게 하라고 했지?'},
+    {sp:'사장님',tx:'바닥 구석도 안닦았던데?'},
+    {type:'choice',
+     str:{ptx:'네? 어제 마감 늦게까지 손님이 와서 청소할 시간이 부족했어요',btx:'아니, 변명하려고? 잘못했으면 알겠습니다 해야지.',bsj:'point',eff:{str:-8,mny:-5}},
+     end:{ptx:'아 죄송합니다. 제가 확인을 제대로 못한 것 같아요.',btx:'알면 됐고.',bsj:'default',eff:{str:10,rpt:2}}}
+  ]},
+  {id:'S3',bg:'job',sj:'default',lines:[
+    {sp:null,tx:'(피크타임 끝나고 잠깐 한산한 시간)',sty:'narr'},
+    {sp:'사장님',tx:'내가 너 말고도 다른 지점이 있는데 말이야.',sj:'default'},
+    {sp:'나',tx:'아, 네네',type:'p'},
+    {sp:'사장님',tx:'거기 알바는 지금처럼 한산할 때도 일을 찾아서 하더라 이말이야.'},
+    {sp:'나',tx:'아, 네...',type:'p'},
+    {sp:'사장님',tx:'너도 그 알바처럼 좀 해야 되는거 아니야? 손님 없다고 앉아서 폰만 하지 말고.',sj:'upset'},
+    {sp:'사장님',tx:'할 거 없으면 눈치껏 뭐라도 찾아서 해야지.'},
+    {type:'choice',
+     str:{ptx:'할 거 다 했고 손님도 없는데 잠깐 쉬지도 못해요?',btx:'태도가 왜 그렇게 삐딱해? 너 계속 그러면 오래 못간다?',bsj:'point',eff:{str:-15,mny:-5}},
+     end:{ptx:'네, 다음부터는 더 신경쓸게요.',btx:'그래. 그렇게 내 가게다~ 생각하고 해야지.',bsj:'default',eff:{str:8,mny:3}}}
+  ]},
+  {id:'S4',bg:'job',sj:null,lines:[
+    {sp:'손님',tx:'아, 이게 왜 안돼...'},
+    {sp:'나',tx:'키오스크 어려우시면 주문 이쪽에서 도와드릴게요',type:'p'},
+    {sp:'사장님',tx:'...',sj:'upset'},
+    {sp:'나',tx:'안녕히 가세요-',type:'p'},
+    {sp:'사장님',tx:'저기 말이야, 손님한테 좀 밝게 말할 수 없어?'},
+    {sp:'나',tx:'네?',type:'p'},
+    {sp:'사장님',tx:'아니, 그냥 주문 이쪽에서 도와드린다고 밝게 말할 수 있잖아.'},
+    {sp:'사장님',tx:'굳이 키오스크 어려워한다고 꼽을 줘야해?'},
+    {sp:'사장님',tx:'손님 표정 봤어? 완전 민망해 하시는거? 이래서야 손님이 오고 싶겠어?'},
+    {type:'choice',
+     str:{ptx:'손님이요? 별 생각 없어 보이셨는데요?',btx:'아니, 내 말이 틀렸다는거야?',bsj:'point',eff:{str:-18,mny:-8}},
+     end:{ptx:'아 네, 더 밝게 할게요.',btx:'그래. 직원이 좀 웃고 그래야 가게가 생기가 돌 거 아냐~',bsj:'default',eff:{str:8,mny:2}}}
+  ]},
+  {id:'S5',bg:'job',sj:'default',lines:[
+    {sp:'사장님',tx:'아, 그리고 아까 손님 햄버거 하나 잘못 나간 거.',sj:'default'},
+    {sp:'나',tx:'네?',type:'p'},
+    {sp:'사장님',tx:'그거 다시 만드는데 드는 재료비 하나하나 쌓이면 다~ 내 손해인거 몰라?'},
+    {sp:'사장님',tx:'이건 니 이번달 월급에서 뺄거야.',sj:'upset'},
+    {type:'choice',
+     str:{ptx:'그거 손님이 주문 잘못해서 다시 나간건데 왜 제 월급에서 까요?',btx:'한번 더 확인을 했었어야지. 니 탓은 없다는거야 지금?',bsj:'point',eff:{str:-15,mny:-12}},
+     end:{ptx:'죄송합니다. 다음부터는 꼼꼼하게 확인할게요.',btx:'이번 한번만 봐줄거야. 다음부터 조심해',bsj:'default',eff:{str:12}}}
+  ]},
+  {id:'S6',bg:'job',sj:'default',lines:[
+    {sp:'사장님',tx:'아 맞다, 내일 오픈 알바 한 명이 못나온대.',sj:'default'},
+    {sp:'나',tx:'네?',type:'p'},
+    {sp:'사장님',tx:'너 내일 쉬지? 니가 나와서 대타좀 해'},
+    {sp:'나',tx:'네??',type:'p'},
+    {sp:'사장님',tx:'왜? 내일 쉰다며? 젊은 사람이 하루 더 일하는게 뭐 힘들다고.',sj:'upset'},
+    {type:'choice',
+     str:{ptx:'아니, 갑자기 이러시면 곤란하죠.',btx:'다들 맞춰가면서 하는거지 뭘. 협조성이 그렇게 없어서 어떡해?',bsj:'point',eff:{str:-12,rpt:-10}},
+     end:{ptx:'아... 내일은 집에서 쉬려고 했는데... 알겠습니다',btx:'그래, 쉬어서 뭐 해? 월급도 쳐주잖아.',bsj:'default',eff:{str:18,mny:15}}}
+  ]},
+  {id:'S7',bg:'job',sj:'upset',lines:[
+    {sp:'사장님',tx:'아니, 미들 타임 알바가 왜 이렇게 금방금방 그만두는거야?',sj:'upset'},
+    {sp:'나',tx:'아... 사정이 있을 수도 있고...',type:'p'},
+    {sp:'사장님',tx:'사정은 무슨 사정.'},
+    {sp:'사장님',tx:'요즘 애들은 금방 힘들다고 도망갈 생각만 하더라.'},
+    {sp:'사장님',tx:'또 새로 가르쳐야하잖아.'},
+    {sp:'나',tx:'아...그쵸...',type:'p'},
+    {sp:'사장님',tx:'너 미들도 해봤지? 너가 새로 오는 사람 좀 가르쳐.',sj:'default'},
+    {sp:'나',tx:'네? 저도 미들 한번 해봤는데',type:'p'},
+    {sp:'사장님',tx:'그래서 안하겠다고?',sj:'upset'},
+    {type:'choice',
+     str:{ptx:'아니, 미들타임이랑 저랑 무슨 상관이에요. 제가 미들 타임때 또 나와야하는 거 아니에요?',btx:'뭐? 너 말본새가 왜이래?',bsj:'point',eff:{str:-20,mny:-10}},
+     end:{ptx:'네.. 알겠습니다..',btx:'걔도 금방 그만두면 너 때문이니까 똑바로 가르쳐',bsj:'default',eff:{str:20,mny:15}}}
+  ]}
+];
+
+/* ── STATE ── */
+let G={str:50,mny:50,rpt:50};
+let curSc=0,curLn=0,waiting=false,pend=null,curChoice=null;
+let sjState=null,sjVisible=false;
+let typerT=null,typerFull='';
+let pTarget='',pEff=null,pCompose=false;
+
+function freshG(){return{str:50,mny:50,rpt:50};}
+function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
+
+/* ── HUD (mny + str only) ── */
+function hud(){
+  $('sv').textContent=G.str;
+  $('mv').textContent=G.mny;
+}
+function applyEff(e){
+  if(!e)return;
+  if(e.str)G.str=clamp(G.str+e.str,0,100);
+  if(e.mny)G.mny=clamp(G.mny+e.mny,0,100);
+  if(e.rpt)G.rpt=clamp(G.rpt+e.rpt,0,100);
+  hud();
+}
+
+/* ── INTRO ── */
+addEventListener('load',()=>{
+  setTimeout(()=>{
+    $('intro-bg').style.opacity='1';
+    setTimeout(()=>{
+      $('title-img').classList.add('bang');
+      setTimeout(()=>{
+        $('sg-intro').classList.add('appear');
+        $('intro-hint').style.display='block';
+      },200);
+    },300);
+  },200);
+});
+function onTitleClick(){
+  if(!$('title-img').classList.contains('bang'))return;
+  startGame();
+}
+
+/* ── START / RESTART ── */
+function startGame(){
+  $('intro').style.transition='opacity .5s';
+  $('intro').style.opacity='0';
+  setTimeout(()=>$('intro').style.display='none',500);
+  G=freshG();hud();
+  $('status').style.display='block';
+  $('chat').style.display='block';
+  runScene(0);
+}
+function restartGame(){
+  $('ending').classList.remove('show');
+  $('end-connect').style.display='none';
+  G=freshG();hud();
+  $('status').style.display='none';
+  $('chat').style.display='none';
+  $('sj-wrap').style.display='none';
+  $('str-graph').style.opacity='0';$('str-graph').classList.remove('sgshow');
+  $('bg').style.backgroundImage='';
+  waiting=false;pend=null;curChoice=null;
+  $('intro').style.display='block';
+  $('intro').style.opacity='0';
+  $('intro').style.transition='';
+  $('title-img').classList.remove('bang');
+  $('sg-intro').classList.remove('appear');
+  $('intro-hint').style.display='none';
+  $('intro-bg').style.opacity='0';
+  sjVisible=false;sjState=null;
+  setTimeout(()=>{
+    $('intro').style.opacity='1';
+    setTimeout(()=>{
+      $('intro-bg').style.opacity='1';
+      setTimeout(()=>$('title-img').classList.add('bang'),300);
+      setTimeout(()=>{$('sg-intro').classList.add('appear');$('intro-hint').style.display='block';},500);
+    },100);
+  },60);
+}
+
+/* ── BG ── */
+function setBG(name){
+  const fade=$('fade');
+  fade.classList.add('in');
+  setTimeout(()=>{
+    $('bg').style.backgroundImage=`url('data/BG/${name}.png')`;
+    fade.classList.remove('in');
+  },400);
+}
+
+/* ── SJ ── */
+function setSJ(state){
+  const wrap=$('sj-wrap'),img=$('sj-img'),sg=$('str-graph');
+  if(state===null||state===undefined){
+    wrap.style.display='none';
+    sg.style.opacity='0';sg.classList.remove('sgshow');
+    sjVisible=false;sjState=null;
+    return;
+  }
+  sjState=state;
+  img.src=`data/SJ/${state}.png`;
+  if(state==='point'){
+    img.className='bang-in';
+    sg.classList.remove('sgshow');void sg.offsetWidth;sg.classList.add('sgshow');
+  } else {
+    sg.style.opacity='0';sg.classList.remove('sgshow');
+    img.className='slide-in';
+  }
+  wrap.style.display='block';
+  sjVisible=true;
+}
+
+/* ── TYPEWRITER ── */
+function typeWrite(el,txt,speed,done){
+  clearInterval(typerT);typerFull=txt;el.textContent='';let i=0;
+  typerT=setInterval(()=>{
+    el.textContent+=txt[i++];
+    if(i>=txt.length){clearInterval(typerT);typerT=null;if(done)done();}
+  },speed||32);
+}
+function skipTyper(el){
+  if(typerT){clearInterval(typerT);typerT=null;el.textContent=typerFull;return true;}
+  return false;
+}
+
+/* ── SCENE RUNNER ── */
+function runScene(si){
+  curSc=si;curLn=0;
+  const sc=SCENES[si];
+  setBG(sc.bg);
+  if(sc.sj!==undefined)setSJ(sc.sj);
+  setTimeout(()=>nextLine(),440);
+}
+
+function nextLine(){
+  const sc=SCENES[curSc];
+  if(curLn>=sc.lines.length){
+    if(curSc+1<SCENES.length)runScene(curSc+1);
+    else showEnding();
+    return;
+  }
+  const ln=sc.lines[curLn++];
+  if(ln.sj!==undefined)setSJ(ln.sj);
+  if(ln.type==='choice'){showChoice(ln);return;}
+
+  $('chat-frame').src='data/chat/chat.png';
+  $('type-wrap').classList.remove('active');
+  $('chat-text').style.display='';
+  $('adv-hint').style.display='block';
+  $('chat-name').className='';
+  const el=$('chat-text');
+
+  if(ln.sty==='narr'){
+    $('chat-name').textContent='';
+    el.className='narr';
+    typeWrite(el,ln.tx,42);
+    setWait(()=>{if(ln.eff)applyEff(ln.eff);nextLine();});
+  } else if(ln.type==='p'){
+    $('adv-hint').style.display='none';
+    $('chat-text').style.display='none';
+    startPType(ln.tx,ln.eff);
+  } else if(ln.type==='pn'){
+    $('chat-name').textContent='나';
+    el.className='';
+    typeWrite(el,ln.tx,32);
+    setWait(()=>{if(ln.eff)applyEff(ln.eff);nextLine();});
+  } else {
+    $('chat-name').textContent=ln.sp||'';
+    el.className=ln.sp==='사장님'?'boss':'';
+    typeWrite(el,ln.tx,32);
+    setWait(()=>nextLine());
+  }
+}
+
+/* ── P TYPING: Enter만으로 확정 ── */
+function startPType(target,eff){
+  pTarget=target;pEff=eff||null;
+  $('chat-name').textContent='나';
+  $('chat-name').className='';
+  $('type-hint').textContent=target;
+  const inp=$('type-input');
+  inp.value='';
+  $('type-wrap').classList.add('active');
+  setTimeout(()=>inp.focus(),30);
+  inp.oncompositionstart=()=>pCompose=true;
+  inp.oncompositionend=()=>pCompose=false;
+  inp.onkeydown=e=>{
+    if(e.key==='Enter'&&!pCompose){
+      e.preventDefault();
+      if(inp.value.trim().length>=1)confirmPType();
+    }
+  };
+}
+function confirmPType(){
+  const inp=$('type-input');
+  inp.onkeydown=null;inp.oncompositionstart=null;inp.oncompositionend=null;
+  $('type-wrap').classList.remove('active');
+  $('chat-text').style.display='';
+  $('chat-text').className='';
+  $('chat-text').textContent=pTarget;
+  if(pEff)applyEff(pEff);
+  // 엔터만으로 바로 다음 줄로 이동
+  nextLine();
+}
+
+/* ── CHOICE ── */
+function showChoice(ln){
+  curChoice=ln;
+  $('chat-frame').src='data/chat/choice.png';
+  $('type-wrap').classList.remove('active');
+  $('chat-text').style.display='none';
+  $('chat-name').textContent='';$('chat-name').className='';
+  $('adv-hint').style.display='none';
+  waiting=false;pend=null;
+}
+function pickStr(){
+  if(!curChoice)return;
+  const c=curChoice.str;curChoice=null;
+  applyEff(c.eff);
+  $('chat-text').style.display='';
+  showPLine(c.ptx,()=>{setSJ(c.bsj);showBossLine(c.btx,()=>nextLine());});
+}
+function pickEnd(){
+  if(!curChoice)return;
+  const c=curChoice.end;curChoice=null;
+  applyEff(c.eff);
+  $('chat-text').style.display='';
+  showPLine(c.ptx,()=>{setSJ(c.bsj);showBossLine(c.btx,()=>nextLine());});
+}
+function showPLine(txt,cb){
+  $('chat-frame').src='data/chat/chat.png';
+  $('chat-name').textContent='나';$('chat-name').className='';
+  const el=$('chat-text');el.className='';
+  typeWrite(el,txt,32);
+  $('adv-hint').style.display='block';
+  setWait(cb);
+}
+function showBossLine(txt,cb){
+  $('chat-name').textContent='사장님';$('chat-name').className='';
+  const el=$('chat-text');el.className='boss';
+  typeWrite(el,txt,32);
+  $('adv-hint').style.display='block';
+  setWait(cb);
+}
+
+/* ── WAIT / ADVANCE ── */
+function setWait(fn){waiting=true;pend=fn;}
+function advance(){
+  if(curChoice)return;
+  if(skipTyper($('chat-text')))return;
+  if(!waiting)return;
+  waiting=false;
+  const fn=pend;pend=null;
+  if(fn)fn();
+}
+
+/* ── ENDINGS ── */
+const ENDS={
+  e1:{bg:'Endling_1',title:'주말 삭제 엔딩',
+      lines:[
+        '하... 고분 고분 대답하느라 너무 지쳤어',
+        '__blackout__',
+        '어우, 잘잤다. 지금 몇시야?',
+        '어?? 오후 8시? 아씨, 내 휴일!!'
+      ]},
+  e2:{bg:'Endling_2',title:'퇴근 후 맥주 엔딩',
+      lines:['아, 오늘도 잘 참았다. 기분 좋게 맥주 하나 때리고 잠이나 자자']},
+  e3:{bg:'Endling_3',title:'퇴사 엔딩',
+      lines:['결국 잘렸지만, 이딴 거지같은 사장 밑에서는 일 못해. 다른 알바나 구하자']}
+};
+
+/* Ending 조건:
+   E1: 스트레스 ≥ 85 AND 월급 ≥ 60
+   E2: 스트레스 35~84 AND 월급 ≥ 40
+   E3: 월급 < 40 OR 스트레스 ≤ 10
+*/
+function resolveEndingKey(){
+  if(G.str>=85&&G.mny>=60)return'e1';
+  if(G.mny<40||G.str<=10)return'e3';
+  return'e2';
+}
+
+function showEnding(){
+  setSJ(null);
+  $('status').style.display='none';
+  const fd=$('fade');
+
+  // 1. 페이드 아웃
+  fd.classList.add('in');
+  setTimeout(()=>{
+    $('chat').style.display='none';
+    $('bg').style.backgroundImage='';
+    $('ec-text').textContent='';
+
+    // 2. Endling_connect 화면 표시
+    $('end-connect').style.display='flex';
+    fd.classList.remove('in'); // 페이드 인
+
+    // 3. "계산 중" 텍스트 타이핑
+    setTimeout(()=>{
+      typeWrite($('ec-text'),'오늘도 잘 참았을까?\n계산 중 . . .',80,()=>{
+        // 4. 잠시 후 페이드 아웃 → 실제 엔딩
+        setTimeout(()=>{
+          fd.classList.add('in');
+          setTimeout(()=>{
+            $('end-connect').style.display='none';
+            startEndingScreen(resolveEndingKey());
+          },400);
+        },1200);
+      });
+    },450);
+  },400);
+}
+
+function startEndingScreen(key){
+  const E=ENDS[key];
+  const fd=$('fade');
+  $('bg').style.backgroundImage=`url('data/BG/${E.bg}.png')`;
+  $('chat').style.display='block';
+  $('chat-frame').src='data/chat/chat.png';
+  $('type-wrap').classList.remove('active');
+  $('chat-text').style.display='';
+  $('adv-hint').style.display='none';
+  $('chat-name').textContent=E.title;
+  $('chat-name').className='';
+
+  fd.classList.remove('in'); // 페이드 인
+
+  let idx=0;
+  function nextEndLine(){
+    if(idx>=E.lines.length){
+      $('adv-hint').style.display='none';
+      $('ending').classList.add('show');
+      return;
+    }
+    const line=E.lines[idx++];
+    if(line==='__blackout__'){
+      fd.classList.add('in');
+      setTimeout(()=>{fd.classList.remove('in');setTimeout(nextEndLine,450);},400);
+      return;
+    }
+    const el=$('chat-text');el.className='';
+    typeWrite(el,line,42,()=>{
+      $('adv-hint').style.display='block';
+      setWait(()=>{$('adv-hint').style.display='none';nextEndLine();});
+    });
+  }
+  setTimeout(nextEndLine,450);
+}
+
+/* ── INPUT ── */
+document.addEventListener('keydown',e=>{
+  if(e.target.id==='type-input')return;
+  if(e.code==='Space'||e.key===' '){
+    e.preventDefault();
+    if(!curChoice)advance();
+    return;
+  }
+  if((e.key==='p'||e.key==='P')&&curChoice){pickStr();return;}
+  if((e.key==='t'||e.key==='T')&&curChoice){pickEnd();return;}
+});
+document.addEventListener('click',e=>{
+  if(e.target.closest('#ending')||e.target.closest('#intro')||e.target.id==='serial-btn')return;
+  if(curChoice||e.target.id==='type-input')return;
+  advance();
+});
+
+/* ── WEB SERIAL ── */
+let serialPort=null,serialReader=null,arduinoConnected=false;
+async function toggleSerial(){
+  if(arduinoConnected){
+    try{if(serialReader)await serialReader.cancel();}catch(err){}
+    try{if(serialPort)await serialPort.close();}catch(err){}
+    serialPort=null;serialReader=null;arduinoConnected=false;
+    $('serial-btn').textContent='🔌';$('serial-btn').classList.remove('on');return;
+  }
+  if(!('serial' in navigator)){alert('Chrome/Edge + 로컬서버 필요');return;}
+  try{
+    serialPort=await navigator.serial.requestPort();
+    await serialPort.open({baudRate:9600});
+    arduinoConnected=true;
+    $('serial-btn').textContent='✅';$('serial-btn').classList.add('on');
+    readSerial();
+  }catch(err){if(err.name!=='NotFoundError')alert('연결 실패: '+err.message);}
+}
+async function readSerial(){
+  const dec=new TextDecoderStream();
+  serialPort.readable.pipeTo(dec.writable);
+  const reader=dec.readable.getReader();serialReader=reader;let buf='';
+  try{
+    while(true){
+      const{value,done}=await reader.read();if(done)break;
+      buf+=value;
+      const lines=buf.split('\n');buf=lines.pop();
+      for(const l of lines){const m=l.trim();if(m)onArduino(m);}
+    }
+  }catch(err){arduinoConnected=false;$('serial-btn').textContent='🔌';$('serial-btn').classList.remove('on');}
+}
+function onArduino(msg){
+  if(msg==='SHAKE'&&curChoice)pickEnd();
+  if((msg==='PIEZO'||msg==='BTN:1')&&curChoice)pickStr();
+}
+</script>
+</body>
+</html>
