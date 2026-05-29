@@ -15,12 +15,15 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;}
   overflow:hidden;
 }
 #bg{position:absolute;inset:0;background-size:cover;background-position:center;}
+#dim-overlay{
+  position:absolute;inset:0;background:#000;opacity:0;
+  pointer-events:none;z-index:25;transition:opacity .5s ease;
+}
 
 /* ── SJ ── */
 #sj-wrap{
   position:absolute;left:840px;top:0;
-  width:1080px;height:1080px;
-  display:none;z-index:10;
+  width:1080px;height:1080px;display:none;z-index:10;
 }
 #sj-img{width:1080px;height:1080px;object-fit:contain;object-position:bottom;}
 #sj-img.slide-in{animation:sj-slide .3s ease forwards;}
@@ -40,10 +43,9 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;}
   100%{opacity:1;transform:scale(1) rotate(0);}
 }
 
-/* ── STATUS (mny + str only, no rpt) ── */
+/* ── STATUS ── */
 #status{
-  position:absolute;left:0;top:0;
-  z-index:20;display:none;
+  position:absolute;left:0;top:0;z-index:20;display:none;
   padding:60px;
   background:url('data/status.png') no-repeat top left;
 }
@@ -58,32 +60,23 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;}
 /* ── CHAT BOX ── */
 #chat{
   position:absolute;left:0;top:571px;
-  width:1920px;height:509px;
-  z-index:30;display:none;
+  width:1920px;height:509px;z-index:30;display:none;
 }
-#chat-frame{
-  position:absolute;top:0;left:0;
-  width:1920px;height:509px;object-fit:fill;
-}
+#chat-frame{position:absolute;top:0;left:0;width:1920px;height:509px;object-fit:fill;}
 #chat-name{
-  position:absolute;
-  left:238px;top:58px;width:317px;height:91px;
+  position:absolute;left:238px;top:58px;width:317px;height:91px;
   font-family:'neodgm',monospace;font-size:60px;color:#fff;
   display:flex;align-items:center;justify-content:center;
   z-index:31;pointer-events:none;
 }
 #chat-text{
-  position:absolute;
-  left:223px;top:168px;width:1481px;
+  position:absolute;left:223px;top:168px;width:1481px;
   font-family:'neodgm',monospace;font-size:60px;
-  color:#fff;line-height:90px;
-  white-space:pre-wrap;
+  color:#fff;line-height:90px;white-space:pre-wrap;
   z-index:31;pointer-events:none;
 }
 #chat-text.narr{color:rgba(255,255,255,.55);}
 #chat-text.boss{color:#FF6E34;}
-
-/* Typing wrap */
 #type-wrap{
   position:absolute;left:223px;top:168px;width:1481px;
   display:none;flex-direction:column;gap:8px;
@@ -131,57 +124,103 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;}
   opacity:0;transition:opacity 1.2s;
 }
 #sg-intro{
-  position:absolute;left:50%;top:50%;
-  width:min(520px,48vw);opacity:0;
-  transform:translate(-50%,-50%);z-index:1;
+  position:absolute;left:230px;top:0;
+  width:1080px;height:1080px;opacity:0;z-index:1;object-fit:contain;
 }
 #sg-intro.appear{animation:sg-pop .5s ease forwards;}
 #title-img{
-  position:absolute;left:50%;top:50%;
-  width:min(640px,60vw);opacity:0;z-index:2;
-  transform:translate(-50%,-50%) scale(1.5);
-  cursor:pointer;pointer-events:none;
-  filter:drop-shadow(0 6px 32px rgba(0,0,0,.8));
+  position:absolute;left:230px;top:0;
+  width:1080px;height:1080px;
+  object-fit:contain;opacity:0;z-index:2;
+  transform-origin:center center;
 }
-#title-img.bang{
-  animation:title-bang .55s cubic-bezier(.22,.61,.36,1) forwards;
-  pointer-events:all;
-}
+#title-img.bang{animation:title-bang .55s cubic-bezier(.22,.61,.36,1) forwards;}
 @keyframes title-bang{
-  0%  {transform:translate(-50%,-50%) scale(1.55) rotate(-3deg);opacity:0;}
-  45% {transform:translate(-50%,-50%) scale(.93)  rotate(.5deg);opacity:1;}
-  75% {transform:translate(-50%,-50%) scale(1.04);opacity:1;}
-  100%{transform:translate(-50%,-50%) scale(1);   opacity:1;}
+  0%  {transform:scale(1.55) rotate(-3deg);opacity:0;}
+  45% {transform:scale(.93)  rotate(.5deg);opacity:1;}
+  75% {transform:scale(1.04);opacity:1;}
+  100%{transform:scale(1);   opacity:1;}
 }
-#intro-hint{
-  position:absolute;bottom:5%;width:100%;text-align:center;
-  font-family:'neodgm',monospace;font-size:22px;
-  color:rgba(255,255,255,.5);animation:blink 1.4s infinite;display:none;
+/* btn.png: 위 50% = 게임시작, 아래 50% = 게임설명 */
+#btn-wrap{
+  position:absolute;left:1576px;top:776px;
+  width:344px;height:304px;
+  z-index:3;display:none;
+}
+#btn-wrap.show{display:block;}
+#btn-wrap img{width:344px;height:304px;object-fit:contain;display:block;}
+#btn-start{
+  position:absolute;top:0;left:0;
+  width:344px;height:152px;cursor:pointer;
+}
+#btn-desc-hit{
+  position:absolute;top:152px;left:0;
+  width:344px;height:152px;cursor:pointer;
 }
 
-/* ── ENDING CONNECT (Figma: Endling_connect, #363636 bg) ── */
+/* 인트로 시리얼 버튼 */
+#serial-intro-btn{
+  position:absolute;left:1576px;top:690px;width:344px;
+  font-family:'neodgm',monospace;font-size:22px;
+  background:rgba(0,0,0,.65);border:2px solid #555;
+  color:#ccc;padding:10px 0;cursor:pointer;
+  z-index:4;text-align:center;display:none;
+}
+#serial-intro-btn.show{display:block;}
+#serial-intro-btn.on{border-color:#5b9d7a;color:#5b9d7a;}
+
+/* ── DESC OVERLAY (Figma layout) ── */
+#desc-overlay{
+  position:absolute;inset:0;z-index:210;
+  display:none;
+  background:url('data/desc/BG/desc.png') center/cover no-repeat;
+}
+#desc-overlay.show{display:flex;}
+#desc-content{
+  position:absolute;inset:0;
+  display:flex;flex-direction:column;align-items:center;
+  padding:175px 200px;gap:54px;
+  box-sizing:border-box;
+}
+#desc-img-frame{
+  width:1520px;
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;
+}
+#desc-slide-img{
+  max-width:1520px;
+  object-fit:contain;
+}
+#desc-slide-text{
+  width:1520px;
+  font-family:'neodgm',monospace;font-size:48px;line-height:72px;
+  color:#000;text-align:center;white-space:pre-wrap;
+}
+#desc-footer{
+  width:1520px;
+  display:flex;justify-content:center;gap:225px;
+}
+#desc-footer span{
+  font-family:'neodgm',monospace;font-size:48px;line-height:72px;
+  color:#FF6E34;
+}
+
+/* ── ENDING CONNECT ── */
 #end-connect{
   position:absolute;inset:0;z-index:130;
-  background:#363636;
-  display:none;
+  background:#363636;display:none;
   align-items:center;justify-content:center;
 }
-#ec-inner{
-  display:flex;flex-direction:column;align-items:center;gap:36px;
-  width:570px;
-}
+#ec-inner{display:flex;flex-direction:column;align-items:center;gap:36px;width:570px;}
 #ec-icons{display:flex;gap:54px;}
-#ec-icons img{
-  width:205px;height:205px;
-  object-fit:contain;image-rendering:pixelated;
-}
+#ec-icons img{width:205px;height:205px;object-fit:contain;image-rendering:pixelated;}
 #ec-text{
   font-family:'neodgm',monospace;font-size:60px;
   color:#FF6E34;text-align:center;line-height:90px;
   white-space:pre-wrap;width:570px;
 }
 
-/* ── ENDING restart btn ── */
+/* ── ENDING ── */
 #ending{
   position:absolute;bottom:80px;left:0;right:0;
   z-index:150;display:none;justify-content:center;
@@ -194,7 +233,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;}
 }
 .again-btn:hover{background:rgba(255,102,0,.18);}
 
-/* ── SERIAL ── */
+/* ── SERIAL (in-game) ── */
 #serial-btn{
   position:absolute;bottom:12px;right:14px;z-index:50;
   font-family:'neodgm',monospace;font-size:18px;
@@ -207,13 +246,20 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;}
 <body>
 <div id="game">
   <div id="fade"></div>
+  <div id="dim-overlay"></div>
 
   <!-- INTRO -->
   <div id="intro">
     <div id="intro-bg"></div>
     <img id="sg-intro" src="data/strGraph.png" alt="">
-    <img id="title-img" src="data/title.png" alt="오늘도 참는다" onclick="onTitleClick()">
-    <div id="intro-hint">클릭해서 출근하기</div>
+    <img id="title-img" src="data/title.png" alt="오늘도 참는다">
+    <!-- btn.png 상단=게임시작 / 하단=게임설명 -->
+    <div id="btn-wrap">
+      <img src="data/btn.png" alt="">
+      <div id="btn-start" onclick="startGame()"></div>
+      <div id="btn-desc-hit" onclick="openDesc()"></div>
+    </div>
+    <button id="serial-intro-btn" onclick="toggleSerial()">🔌 Arduino 연결</button>
   </div>
 
   <!-- GAME -->
@@ -221,13 +267,13 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;}
   <img id="str-graph" src="data/strGraph.png" alt="">
   <div id="sj-wrap"><img id="sj-img" src="data/SJ/default.png" alt="사장님"></div>
 
-  <!-- STATUS (mny + str only) -->
+  <!-- STATUS -->
   <div id="status">
     <div class="stat-row"><img src="data/icon/mny.png" alt="월급"><span class="stat-val" id="mv">50</span></div>
     <div class="stat-row"><img src="data/icon/str.png" alt="스트레스"><span class="stat-val" id="sv">50</span></div>
   </div>
 
-  <!-- CHAT BOX -->
+  <!-- CHAT -->
   <div id="chat">
     <img id="chat-frame" src="data/chat/chat.png" alt="">
     <div id="chat-name"></div>
@@ -239,10 +285,24 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;}
       </div>
       <div id="type-label">[타이핑하세요]</div>
     </div>
-    <div id="adv-hint">▼ Space</div>
+    <div id="adv-hint">▼ Enter</div>
   </div>
 
-  <!-- ENDING CONNECT TRANSITION -->
+  <!-- DESC OVERLAY (HTML 기반 Figma 레이아웃) -->
+  <div id="desc-overlay">
+    <div id="desc-content">
+      <div id="desc-img-frame">
+        <img id="desc-slide-img" src="" alt="">
+      </div>
+      <div id="desc-slide-text"></div>
+      <div id="desc-footer">
+        <span>Enter to next</span>
+        <span>Esc to close</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ENDING CONNECT -->
   <div id="end-connect">
     <div id="ec-inner">
       <div id="ec-icons">
@@ -253,9 +313,9 @@ html,body{width:100%;height:100%;overflow:hidden;background:#000;}
     </div>
   </div>
 
-  <!-- ENDING restart btn -->
+  <!-- ENDING -->
   <div id="ending">
-    <button class="again-btn" onclick="restartGame()">다시 출근하기</button>
+    <button class="again-btn" onclick="restartGame()">처음 화면으로</button>
   </div>
 
   <button id="serial-btn" onclick="toggleSerial()">🔌</button>
@@ -272,6 +332,90 @@ function scaleGame(){
 }
 addEventListener('resize',scaleGame);scaleGame();
 const $=id=>document.getElementById(id);
+
+/* ── AUDIO ── */
+// MP3 경로: mp3/ 폴더
+const SFX={};
+['subway','alarm','crowd','bell2','no','buzzer','boom'].forEach(n=>{
+  SFX[n]=new Audio('mp3/'+n+'.mp3');
+});
+SFX.coin3=new Audio('mp3/coin3.mp3');
+SFX.subway.loop=true;
+SFX.crowd.loop=true;
+
+// 브라우저 autoplay 정책 우회: 첫 클릭 시 모든 Audio 잠금 해제
+let audioUnlocked=false;
+document.addEventListener('click',()=>{
+  if(audioUnlocked)return;
+  audioUnlocked=true;
+  // 무음 재생으로 AudioContext 해제
+  Object.values(SFX).forEach(s=>{
+    const prev=s.src;
+    s.volume=0;
+    s.play().then(()=>{s.pause();s.currentTime=0;s.volume=1;}).catch(()=>{s.volume=1;});
+  });
+},{once:true});
+
+function playSound(name){
+  const s=SFX[name];if(!s)return;
+  s.currentTime=0;s.play().catch(()=>{});
+}
+function stopSound(name){
+  const s=SFX[name];if(!s)return;
+  s.pause();s.currentTime=0;
+}
+let ambientName=null;
+function setAmbient(name){
+  if(ambientName===name)return;
+  if(ambientName)stopSound(ambientName);
+  ambientName=name;
+  if(name){SFX[name].currentTime=0;SFX[name].play().catch(()=>{});}
+}
+function trySubway(){
+  if(ambientName!=='subway')setAmbient('subway');
+}
+
+/* ── DESC (게임설명) ── */
+const DESC_DATA=[
+  {
+    img:'data/desc/desc_image/image_1.png', h:334,
+    text:'오늘 하루도 돈을 벌기 위해 열심히 일하는 당신!\n계속되는 스트레스 속에서 분노를 조절하고\n무사히 하루를 마무리 할 수 있을까?!'
+  },
+  {
+    img:'data/desc/desc_image/image_2.png', h:359,
+    text:' 엔터키를 누르면 대화창이 넘어갑니다.\n말실수 하지 않도록 뇌에 힘을 꽉 주고\n해야하는 \'대사\'를 타이핑합시다.'
+  },
+  {
+    img:'data/desc/desc_image/image_3.png', h:200,
+    text:"짜증나는 사장님의 말을 듣고, 화를 낼지 말지 결정하세요!\n  '돈 벌자..!' 돈다발을 흔들며 마음을 다스려봅시다~\n  '못참겠다!' 버저버튼을 눌러 속마음을 쏟아냅시다!"
+  },
+  {
+    img:'data/desc/desc_image/image_4.png', h:205,
+    text:'변화하는 돈&스트레스 점수에 따라 엔딩이 결정됩니다!\n화병과 함께 월급을 얻을것인가,\n때려치우고 후련함을 얻을건인가! 선택은 당신의 몫입니다.'
+  }
+];
+let descIdx=0;
+function openDesc(){
+  trySubway();
+  descIdx=0;
+  showDescSlide();
+  $('desc-overlay').classList.add('show');
+}
+function showDescSlide(){
+  const d=DESC_DATA[descIdx];
+  const img=$('desc-slide-img');
+  img.src=d.img;
+  img.style.height=d.h+'px';
+  $('desc-slide-text').textContent=d.text;
+}
+function descNext(){
+  descIdx++;
+  if(descIdx>=DESC_DATA.length){closeDesc();return;}
+  showDescSlide();
+}
+function closeDesc(){
+  $('desc-overlay').classList.remove('show');
+}
 
 /* ── SCENES ── */
 const SCENES=[
@@ -374,11 +518,7 @@ let pTarget='',pEff=null,pCompose=false;
 function freshG(){return{str:50,mny:50,rpt:50};}
 function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
 
-/* ── HUD (mny + str only) ── */
-function hud(){
-  $('sv').textContent=G.str;
-  $('mv').textContent=G.mny;
-}
+function hud(){$('sv').textContent=G.str;$('mv').textContent=G.mny;}
 function applyEff(e){
   if(!e)return;
   if(e.str)G.str=clamp(G.str+e.str,0,100);
@@ -395,18 +535,17 @@ addEventListener('load',()=>{
       $('title-img').classList.add('bang');
       setTimeout(()=>{
         $('sg-intro').classList.add('appear');
-        $('intro-hint').style.display='block';
+        $('btn-wrap').classList.add('show');
+        $('serial-intro-btn').classList.add('show');
       },200);
     },300);
   },200);
 });
-function onTitleClick(){
-  if(!$('title-img').classList.contains('bang'))return;
-  startGame();
-}
 
 /* ── START / RESTART ── */
 function startGame(){
+  closeDesc();
+  setAmbient(null);
   $('intro').style.transition='opacity .5s';
   $('intro').style.opacity='0';
   setTimeout(()=>$('intro').style.display='none',500);
@@ -418,19 +557,22 @@ function startGame(){
 function restartGame(){
   $('ending').classList.remove('show');
   $('end-connect').style.display='none';
+  $('dim-overlay').style.opacity='0';
   G=freshG();hud();
   $('status').style.display='none';
   $('chat').style.display='none';
   $('sj-wrap').style.display='none';
   $('str-graph').style.opacity='0';$('str-graph').classList.remove('sgshow');
   $('bg').style.backgroundImage='';
+  setAmbient(null);
   waiting=false;pend=null;curChoice=null;
   $('intro').style.display='block';
   $('intro').style.opacity='0';
   $('intro').style.transition='';
   $('title-img').classList.remove('bang');
   $('sg-intro').classList.remove('appear');
-  $('intro-hint').style.display='none';
+  $('btn-wrap').classList.remove('show');
+  $('serial-intro-btn').classList.remove('show');
   $('intro-bg').style.opacity='0';
   sjVisible=false;sjState=null;
   setTimeout(()=>{
@@ -438,13 +580,23 @@ function restartGame(){
     setTimeout(()=>{
       $('intro-bg').style.opacity='1';
       setTimeout(()=>$('title-img').classList.add('bang'),300);
-      setTimeout(()=>{$('sg-intro').classList.add('appear');$('intro-hint').style.display='block';},500);
+      setTimeout(()=>{
+        $('sg-intro').classList.add('appear');
+        $('btn-wrap').classList.add('show');
+        $('serial-intro-btn').classList.add('show');
+        setAmbient('subway');
+      },500);
     },100);
   },60);
 }
 
 /* ── BG ── */
 function setBG(name){
+  // Audio per BG
+  if(name==='home_out'){setAmbient(null);setTimeout(()=>playSound('alarm'),420);}
+  else if(name==='job'){setAmbient('crowd');}
+  else{setAmbient(null);}
+
   const fade=$('fade');
   fade.classList.add('in');
   setTimeout(()=>{
@@ -461,6 +613,11 @@ function setSJ(state){
     sg.style.opacity='0';sg.classList.remove('sgshow');
     sjVisible=false;sjState=null;
     return;
+  }
+  if(state!==sjState){
+    if(state==='default') playSound('bell2');
+    else if(state==='upset') playSound('no');
+    else if(state==='point') playSound('boom');
   }
   sjState=state;
   img.src=`data/SJ/${state}.png`;
@@ -537,11 +694,10 @@ function nextLine(){
   }
 }
 
-/* ── P TYPING: Enter만으로 확정 ── */
+/* ── P TYPING ── */
 function startPType(target,eff){
   pTarget=target;pEff=eff||null;
-  $('chat-name').textContent='나';
-  $('chat-name').className='';
+  $('chat-name').textContent='나';$('chat-name').className='';
   $('type-hint').textContent=target;
   const inp=$('type-input');
   inp.value='';
@@ -564,7 +720,6 @@ function confirmPType(){
   $('chat-text').className='';
   $('chat-text').textContent=pTarget;
   if(pEff)applyEff(pEff);
-  // 엔터만으로 바로 다음 줄로 이동
   nextLine();
 }
 
@@ -580,6 +735,7 @@ function showChoice(ln){
 }
 function pickStr(){
   if(!curChoice)return;
+  playSound('buzzer');
   const c=curChoice.str;curChoice=null;
   applyEff(c.eff);
   $('chat-text').style.display='';
@@ -587,6 +743,7 @@ function pickStr(){
 }
 function pickEnd(){
   if(!curChoice)return;
+  playSound('coin3');
   const c=curChoice.end;curChoice=null;
   applyEff(c.eff);
   $('chat-text').style.display='';
@@ -621,24 +778,19 @@ function advance(){
 
 /* ── ENDINGS ── */
 const ENDS={
-  e1:{bg:'Endling_1',title:'주말 삭제 엔딩',
+  e1:{bg:'Endling_1',
       lines:[
         '하... 고분 고분 대답하느라 너무 지쳤어',
         '__blackout__',
         '어우, 잘잤다. 지금 몇시야?',
+        '__dim__',
         '어?? 오후 8시? 아씨, 내 휴일!!'
       ]},
-  e2:{bg:'Endling_2',title:'퇴근 후 맥주 엔딩',
+  e2:{bg:'Endling_2',
       lines:['아, 오늘도 잘 참았다. 기분 좋게 맥주 하나 때리고 잠이나 자자']},
-  e3:{bg:'Endling_3',title:'퇴사 엔딩',
+  e3:{bg:'Endling_3',
       lines:['결국 잘렸지만, 이딴 거지같은 사장 밑에서는 일 못해. 다른 알바나 구하자']}
 };
-
-/* Ending 조건:
-   E1: 스트레스 ≥ 85 AND 월급 ≥ 60
-   E2: 스트레스 35~84 AND 월급 ≥ 40
-   E3: 월급 < 40 OR 스트레스 ≤ 10
-*/
 function resolveEndingKey(){
   if(G.str>=85&&G.mny>=60)return'e1';
   if(G.mny<40||G.str<=10)return'e3';
@@ -646,25 +798,18 @@ function resolveEndingKey(){
 }
 
 function showEnding(){
-  setSJ(null);
+  setSJ(null);setAmbient(null);
   $('status').style.display='none';
   const fd=$('fade');
-
-  // 1. 페이드 아웃
   fd.classList.add('in');
   setTimeout(()=>{
     $('chat').style.display='none';
     $('bg').style.backgroundImage='';
     $('ec-text').textContent='';
-
-    // 2. Endling_connect 화면 표시
     $('end-connect').style.display='flex';
-    fd.classList.remove('in'); // 페이드 인
-
-    // 3. "계산 중" 텍스트 타이핑
+    fd.classList.remove('in');
     setTimeout(()=>{
       typeWrite($('ec-text'),'오늘도 잘 참았을까?\n계산 중 . . .',80,()=>{
-        // 4. 잠시 후 페이드 아웃 → 실제 엔딩
         setTimeout(()=>{
           fd.classList.add('in');
           setTimeout(()=>{
@@ -686,10 +831,9 @@ function startEndingScreen(key){
   $('type-wrap').classList.remove('active');
   $('chat-text').style.display='';
   $('adv-hint').style.display='none';
-  $('chat-name').textContent=E.title;
+  $('chat-name').textContent='나';
   $('chat-name').className='';
-
-  fd.classList.remove('in'); // 페이드 인
+  fd.classList.remove('in');
 
   let idx=0;
   function nextEndLine(){
@@ -704,6 +848,11 @@ function startEndingScreen(key){
       setTimeout(()=>{fd.classList.remove('in');setTimeout(nextEndLine,450);},400);
       return;
     }
+    if(line==='__dim__'){
+      $('dim-overlay').style.opacity='0.55';
+      setTimeout(nextEndLine,300);
+      return;
+    }
     const el=$('chat-text');el.className='';
     typeWrite(el,line,42,()=>{
       $('adv-hint').style.display='block';
@@ -715,55 +864,86 @@ function startEndingScreen(key){
 
 /* ── INPUT ── */
 document.addEventListener('keydown',e=>{
+  // DESC overlay 우선 처리
+  if($('desc-overlay').style.display!=='none'){
+    if(e.key==='Enter'){e.preventDefault();descNext();return;}
+    if(e.key==='Escape'){e.preventDefault();closeDesc();return;}
+    return;
+  }
   if(e.target.id==='type-input')return;
-  if(e.code==='Space'||e.key===' '){
+  if(e.key==='Enter'){
     e.preventDefault();
     if(!curChoice)advance();
     return;
   }
   if((e.key==='p'||e.key==='P')&&curChoice){pickStr();return;}
   if((e.key==='t'||e.key==='T')&&curChoice){pickEnd();return;}
+  if(e.key==='Escape'){closeDesc();return;}
 });
+// 클릭: 타이핑 스킵만
 document.addEventListener('click',e=>{
   if(e.target.closest('#ending')||e.target.closest('#intro')||e.target.id==='serial-btn')return;
   if(curChoice||e.target.id==='type-input')return;
-  advance();
+  skipTyper($('chat-text'));
 });
 
 /* ── WEB SERIAL ── */
 let serialPort=null,serialReader=null,arduinoConnected=false;
+
+function setSerialUI(connected){
+  arduinoConnected=connected;
+  const icon=connected?'✅':'🔌';
+  $('serial-btn').textContent=icon;
+  $('serial-btn').classList.toggle('on',connected);
+  $('serial-intro-btn').textContent=connected?'✅ 연결됨':'🔌 Arduino 연결';
+  $('serial-intro-btn').classList.toggle('on',connected);
+}
+
 async function toggleSerial(){
+  trySubway(); // 버튼 클릭 → subway 재생 허용
   if(arduinoConnected){
-    try{if(serialReader)await serialReader.cancel();}catch(err){}
-    try{if(serialPort)await serialPort.close();}catch(err){}
-    serialPort=null;serialReader=null;arduinoConnected=false;
-    $('serial-btn').textContent='🔌';$('serial-btn').classList.remove('on');return;
+    try{if(serialReader){await serialReader.cancel();serialReader=null;}}catch(e){}
+    try{await serialPort.close();}catch(e){}
+    serialPort=null;
+    setSerialUI(false);
+    return;
   }
   if(!('serial' in navigator)){alert('Chrome/Edge + 로컬서버 필요');return;}
   try{
     serialPort=await navigator.serial.requestPort();
     await serialPort.open({baudRate:9600});
-    arduinoConnected=true;
-    $('serial-btn').textContent='✅';$('serial-btn').classList.add('on');
+    setSerialUI(true);
     readSerial();
   }catch(err){if(err.name!=='NotFoundError')alert('연결 실패: '+err.message);}
 }
+
 async function readSerial(){
-  const dec=new TextDecoderStream();
-  serialPort.readable.pipeTo(dec.writable);
-  const reader=dec.readable.getReader();serialReader=reader;let buf='';
+  const dec=new TextDecoder();
+  let buf='';
   try{
+    serialReader=serialPort.readable.getReader();
     while(true){
-      const{value,done}=await reader.read();if(done)break;
-      buf+=value;
-      const lines=buf.split('\n');buf=lines.pop();
+      const{value,done}=await serialReader.read();
+      if(done)break;
+      buf+=dec.decode(value,{stream:true});
+      const lines=buf.split('\n');
+      buf=lines.pop();
       for(const l of lines){const m=l.trim();if(m)onArduino(m);}
     }
-  }catch(err){arduinoConnected=false;$('serial-btn').textContent='🔌';$('serial-btn').classList.remove('on');}
+  }catch(err){
+    // 연결 끊김
+  }finally{
+    if(serialReader){try{serialReader.releaseLock();}catch(e){}}
+    serialReader=null;
+    setSerialUI(false);
+  }
 }
+
 function onArduino(msg){
-  if(msg==='SHAKE'&&curChoice)pickEnd();
-  if((msg==='PIEZO'||msg==='BTN:1')&&curChoice)pickStr();
+  // SHAKE(tilt) = T키 = 참기/endure
+  if((msg==='SHAKE'||msg==='A')&&curChoice){pickEnd();return;}
+  // PIEZO(buzzer) = P키 = 분출/vent
+  if((msg==='PIEZO'||msg==='B'||msg==='BTN:1')&&curChoice){pickStr();return;}
 }
 </script>
 </body>
